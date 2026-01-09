@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Todo Dashboard Storage</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #1a1a1a;
+            color: #e5e5e5;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: #2a2a2a;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        button:hover {
+            background: #dc2626;
+        }
+        .success {
+            color: #4ade80;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clear Todo Dashboard Storage</h1>
+        <p>Click the button below to clear localStorage and load sample data on next visit.</p>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <div id="message"></div>
+    </div>
+    <script>
+        function clearStorage() {
+            localStorage.removeItem('todo-dashboard-data');
+            document.getElementById('message').innerHTML = '<p class="success">Storage cleared! Refresh your app to see sample data.</p>';
+        }
+    </script>
+</body>
+</html>
