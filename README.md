@@ -1,73 +1,141 @@
-# React + TypeScript + Vite
+# Todo Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, feature-rich productivity dashboard built with React, TypeScript, and Tailwind CSS. Designed for daily task management with support for goals, recurring tasks, habits, and one-off tasks.
 
-Currently, two official plugins are available:
+![Dark Theme](https://img.shields.io/badge/theme-dark-1a1a2e)
+![React](https://img.shields.io/badge/React-18-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38bdf8)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+### Task Management
+- **Goals** - Long-term projects with nested subtasks (up to 3 levels deep)
+- **Recurring Tasks** - Daily, weekly, or custom schedules
+- **Habits** - Track daily habits with streak counters
+- **One-Off Tasks** - Quick tasks for the current day
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Goals System
+- Nested subtasks for breaking down complex projects
+- Multiple resource links per task (documentation, references, etc.)
+- Quick "Add to Today" button for scheduling tasks
+- Task scheduler modal for planning future days
+- Collapsible checklist view with search/filter
+- Progress tracking with visual indicators
+- Inline task editor (edit without leaving Goals view)
 
-## Expanding the ESLint configuration
+### Views
+- **Day View** - Focus on today's tasks across all categories
+- **Week View** - Weekly overview with task distribution
+- **Month View** - Monthly calendar with task indicators
+- **Stats View** - Analytics dashboard with:
+  - Weekly/monthly completion rates
+  - 7-day completion chart
+  - Goal progress breakdown
+  - Habit streak tracking
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Productivity Tools
+- **Pomodoro Timer** - Built-in focus timer
+- **Timezone Tool** - East/West coast times with Central time converter
+- **Weather Widget** - Current conditions and forecast
+- **Time Progress** - Hover tooltip showing day/week/month/year completion
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### UI Features
+- Dark theme optimized for focus
+- Live-updating clock in header
+- Collapsible sidebar
+- Quick add modal for fast task entry
+- Responsive design
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/farazsayed/todo-dashboard.git
+cd todo-dashboard
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Build for Production
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Tech Stack
+
+- **Framework:** React 18 with TypeScript
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS
+- **State Management:** React Context with useReducer
+- **Storage:** localStorage (client-side persistence)
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── AddToTodayButton.tsx
+│   ├── GoalsView.tsx
+│   ├── Header.tsx
+│   ├── MainContent.tsx
+│   ├── MonthView.tsx
+│   ├── PomodoroTimer.tsx
+│   ├── QuickAddModal.tsx
+│   ├── Sidebar.tsx
+│   ├── StatsView.tsx
+│   ├── SubtaskList.tsx
+│   ├── TaskEditor.tsx
+│   ├── TaskLinkEditor.tsx
+│   ├── TaskSchedulerModal.tsx
+│   ├── TimezoneTool.tsx
+│   ├── WeekView.tsx
+│   └── ...
+├── context/             # React Context providers
+│   └── AppContext.tsx
+├── types/               # TypeScript type definitions
+│   └── index.ts
+├── utils/               # Utility functions
+│   ├── stats.ts
+│   ├── storage.ts
+│   └── weather.ts
+└── App.tsx              # Main application component
+```
+
+## Data Model
+
+### Goal
+- Title, color, notes
+- Tasks (with nested subtasks)
+- Progress tracking
+
+### Task
+- Title, notes
+- Scheduled dates & completed dates
+- Resource links (title + URL pairs)
+- Nested subtasks (recursive)
+
+### Recurring Task
+- Title with recurrence pattern
+- Days of week or interval
+- Quick link support
+
+### Habit
+- Title
+- Current streak & best streak
+- Completion history
+
+## License
+
+MIT
