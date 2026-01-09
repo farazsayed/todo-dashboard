@@ -7,8 +7,10 @@ import { MainContent } from './components/MainContent';
 import { WeekView } from './components/WeekView';
 import { MonthView } from './components/MonthView';
 import { GoalsView } from './components/GoalsView';
+import { StatsView } from './components/StatsView';
 import { WeekStrip } from './components/WeekStrip';
 import { QuickAddModal } from './components/QuickAddModal';
+import { TaskSchedulerModal } from './components/TaskSchedulerModal';
 import { EditorPanel } from './components/EditorPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getUserLocation, getWeatherData, type WeatherData } from './utils/weather';
@@ -23,6 +25,7 @@ function AppContent() {
   const [selectedOneOffTask, setSelectedOneOffTask] = useState<OneOffTask | null>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [goalsViewOpen, setGoalsViewOpen] = useState(false);
+  const [taskSchedulerOpen, setTaskSchedulerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
@@ -110,6 +113,14 @@ function AppContent() {
     setGoalsViewOpen(false);
   }, []);
 
+  const handleOpenTaskScheduler = useCallback(() => {
+    setTaskSchedulerOpen(true);
+  }, []);
+
+  const handleCloseTaskScheduler = useCallback(() => {
+    setTaskSchedulerOpen(false);
+  }, []);
+
   // Check if any editor is open
   const hasEditorOpen = selectedGoal !== undefined ||
     selectedTask !== null ||
@@ -131,6 +142,7 @@ function AppContent() {
             onSelectHabit={handleSelectHabit}
             onQuickAddTask={handleQuickAdd}
             onExpandGoals={handleExpandGoals}
+            onScheduleTask={handleOpenTaskScheduler}
             weather={weather}
           />
         }
@@ -141,6 +153,8 @@ function AppContent() {
           <WeekView />
         ) : state.viewMode === 'month' ? (
           <MonthView />
+        ) : state.viewMode === 'stats' ? (
+          <StatsView />
         ) : (
           <MainContent
             onSelectTask={handleSelectTask}
@@ -177,6 +191,11 @@ function AppContent() {
           onSelectTask={handleSelectTask}
           onClose={handleCloseGoalsView}
         />
+      )}
+
+      {/* Task Scheduler Modal */}
+      {taskSchedulerOpen && (
+        <TaskSchedulerModal onClose={handleCloseTaskScheduler} />
       )}
     </>
   );

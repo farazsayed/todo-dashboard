@@ -1,7 +1,16 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { AppState, Goal, Task, RecurringTask, OneOffTask, Habit } from '../types';
-import { loadState, saveState, generateId, getTodayISO } from '../utils/storage';
+import type { AppState, Goal, Task, RecurringTask, OneOffTask, Habit, TaskLink } from '../types';
+import {
+  loadState,
+  saveState,
+  generateId,
+  getTodayISO,
+  findTaskRecursively,
+  updateTaskRecursively,
+  deleteTaskRecursively,
+  addSubtaskToTask,
+} from '../utils/storage';
 
 // Action types
 type Action =
@@ -13,7 +22,15 @@ type Action =
   | { type: 'DELETE_GOAL'; payload: string }
   | { type: 'ADD_TASK'; payload: { goalId: string; task: Task } }
   | { type: 'UPDATE_TASK'; payload: { goalId: string; task: Task } }
+  | { type: 'UPDATE_TASK_RECURSIVE'; payload: { goalId: string; taskId: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: { goalId: string; taskId: string } }
+  | { type: 'DELETE_TASK_RECURSIVE'; payload: { goalId: string; taskId: string } }
+  | { type: 'ADD_SUBTASK'; payload: { goalId: string; parentTaskId: string; subtask: Task } }
+  | { type: 'ADD_TASK_LINK'; payload: { goalId: string; taskId: string; link: TaskLink } }
+  | { type: 'UPDATE_TASK_LINK'; payload: { goalId: string; taskId: string; link: TaskLink } }
+  | { type: 'DELETE_TASK_LINK'; payload: { goalId: string; taskId: string; linkId: string } }
+  | { type: 'SCHEDULE_TASK_TODAY'; payload: { goalId: string; taskId: string } }
+  | { type: 'UNSCHEDULE_TASK_TODAY'; payload: { goalId: string; taskId: string } }
   | { type: 'ADD_RECURRING_TASK'; payload: RecurringTask }
   | { type: 'UPDATE_RECURRING_TASK'; payload: RecurringTask }
   | { type: 'DELETE_RECURRING_TASK'; payload: string }
@@ -89,6 +106,128 @@ function appReducer(state: AppState, action: Action): AppState {
             : g
         ),
       };
+
+    case 'UPDATE_TASK_RECURSIVE':
+      return {
+        ...state,
+        goals: state.goals.map((g) =>
+          g.id === action.payload.goalId
+            ? { ...g, tasks: updateTaskRecursively(g.tasks, action.payload.taskId, action.payload.updates) }
+            : g
+        ),
+      };
+
+    case 'DELETE_TASK_RECURSIVE':
+      return {
+        ...state,
+        goals: state.goals.map((g) =>
+          g.id === action.payload.goalId
+            ? { ...g, tasks: deleteTaskRecursively(g.tasks, action.payload.taskId) }
+            : g
+        ),
+      };
+
+    case 'ADD_SUBTASK':
+      return {
+        ...state,
+        goals: state.goals.map((g) =>
+          g.id === action.payload.goalId
+            ? { ...g, tasks: addSubtaskToTask(g.tasks, action.payload.parentTaskId, action.payload.subtask) }
+            : g
+        ),
+      };
+
+    case 'ADD_TASK_LINK': {
+      const { goalId, taskId, link } = action.payload;
+      return {
+        ...state,
+        goals: state.goals.map((g) => {
+          if (g.id !== goalId) return g;
+          const task = findTaskRecursively(g.tasks, taskId);
+          if (!task) return g;
+          return {
+            ...g,
+            tasks: updateTaskRecursively(g.tasks, taskId, {
+              links: [...(task.links || []), link],
+            }),
+          };
+        }),
+      };
+    }
+
+    case 'UPDATE_TASK_LINK': {
+      const { goalId, taskId, link } = action.payload;
+      return {
+        ...state,
+        goals: state.goals.map((g) => {
+          if (g.id !== goalId) return g;
+          const task = findTaskRecursively(g.tasks, taskId);
+          if (!task) return g;
+          return {
+            ...g,
+            tasks: updateTaskRecursively(g.tasks, taskId, {
+              links: (task.links || []).map((l) => (l.id === link.id ? link : l)),
+            }),
+          };
+        }),
+      };
+    }
+
+    case 'DELETE_TASK_LINK': {
+      const { goalId, taskId, linkId } = action.payload;
+      return {
+        ...state,
+        goals: state.goals.map((g) => {
+          if (g.id !== goalId) return g;
+          const task = findTaskRecursively(g.tasks, taskId);
+          if (!task) return g;
+          return {
+            ...g,
+            tasks: updateTaskRecursively(g.tasks, taskId, {
+              links: (task.links || []).filter((l) => l.id !== linkId),
+            }),
+          };
+        }),
+      };
+    }
+
+    case 'SCHEDULE_TASK_TODAY': {
+      const { goalId, taskId } = action.payload;
+      const today = getTodayISO();
+      return {
+        ...state,
+        goals: state.goals.map((g) => {
+          if (g.id !== goalId) return g;
+          const task = findTaskRecursively(g.tasks, taskId);
+          if (!task || task.scheduledDates.includes(today)) return g;
+          return {
+            ...g,
+            tasks: updateTaskRecursively(g.tasks, taskId, {
+              scheduledDates: [...task.scheduledDates, today],
+            }),
+          };
+        }),
+      };
+    }
+
+    case 'UNSCHEDULE_TASK_TODAY': {
+      const { goalId, taskId } = action.payload;
+      const today = getTodayISO();
+      return {
+        ...state,
+        goals: state.goals.map((g) => {
+          if (g.id !== goalId) return g;
+          const task = findTaskRecursively(g.tasks, taskId);
+          if (!task) return g;
+          return {
+            ...g,
+            tasks: updateTaskRecursively(g.tasks, taskId, {
+              scheduledDates: task.scheduledDates.filter((d) => d !== today),
+            }),
+          };
+        }),
+      };
+    }
 
     case 'ADD_RECURRING_TASK':
       return { ...state, recurringTasks: [...state.recurringTasks, action.payload] };
@@ -171,10 +310,22 @@ interface AppContextType {
   deleteGoal: (goalId: string) => void;
   addTask: (goalId: string, title: string) => void;
   updateTask: (goalId: string, task: Task) => void;
+  updateTaskRecursive: (goalId: string, taskId: string, updates: Partial<Task>) => void;
   deleteTask: (goalId: string, taskId: string) => void;
+  deleteTaskRecursive: (goalId: string, taskId: string) => void;
   toggleTaskCompletion: (goalId: string, taskId: string, date: string) => void;
   scheduleTaskForDate: (goalId: string, taskId: string, date: string) => void;
   unscheduleTaskFromDate: (goalId: string, taskId: string, date: string) => void;
+  // Subtask methods
+  addSubtask: (goalId: string, parentTaskId: string, title: string) => void;
+  // Link methods
+  addTaskLink: (goalId: string, taskId: string, title: string, url: string) => void;
+  updateTaskLink: (goalId: string, taskId: string, link: TaskLink) => void;
+  deleteTaskLink: (goalId: string, taskId: string, linkId: string) => void;
+  // Quick scheduling
+  scheduleTaskToday: (goalId: string, taskId: string) => void;
+  unscheduleTaskToday: (goalId: string, taskId: string) => void;
+  toggleTaskScheduleToday: (goalId: string, taskId: string) => void;
   reorderGoals: (goals: Goal[]) => void;
   reorderTasks: (goalId: string, tasks: Task[]) => void;
 }
@@ -224,8 +375,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       goalId,
       title,
       completed: false,
-      scheduledDates: [getTodayISO()], // Schedule for today by default
+      scheduledDates: [], // Don't schedule by default - user picks when to work on it
       completedDates: [],
+      links: [],
+      subtasks: [],
     };
     dispatch({ type: 'ADD_TASK', payload: { goalId, task } });
   };
@@ -234,8 +387,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'UPDATE_TASK', payload: { goalId, task } });
   };
 
+  const updateTaskRecursive = (goalId: string, taskId: string, updates: Partial<Task>) => {
+    dispatch({ type: 'UPDATE_TASK_RECURSIVE', payload: { goalId, taskId, updates } });
+  };
+
   const deleteTask = (goalId: string, taskId: string) => {
     dispatch({ type: 'DELETE_TASK', payload: { goalId, taskId } });
+  };
+
+  const deleteTaskRecursive = (goalId: string, taskId: string) => {
+    dispatch({ type: 'DELETE_TASK_RECURSIVE', payload: { goalId, taskId } });
   };
 
   const toggleTaskCompletion = (goalId: string, taskId: string, date: string) => {
@@ -295,6 +456,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'REORDER_TASKS', payload: { goalId, tasks } });
   };
 
+  // Subtask methods
+  const addSubtask = (goalId: string, parentTaskId: string, title: string) => {
+    const subtask: Task = {
+      id: generateId(),
+      goalId,
+      parentTaskId,
+      title,
+      completed: false,
+      scheduledDates: [],
+      completedDates: [],
+      links: [],
+      subtasks: [],
+    };
+    dispatch({ type: 'ADD_SUBTASK', payload: { goalId, parentTaskId, subtask } });
+  };
+
+  // Link methods
+  const addTaskLink = (goalId: string, taskId: string, title: string, url: string) => {
+    const link: TaskLink = {
+      id: generateId(),
+      title,
+      url,
+    };
+    dispatch({ type: 'ADD_TASK_LINK', payload: { goalId, taskId, link } });
+  };
+
+  const updateTaskLink = (goalId: string, taskId: string, link: TaskLink) => {
+    dispatch({ type: 'UPDATE_TASK_LINK', payload: { goalId, taskId, link } });
+  };
+
+  const deleteTaskLink = (goalId: string, taskId: string, linkId: string) => {
+    dispatch({ type: 'DELETE_TASK_LINK', payload: { goalId, taskId, linkId } });
+  };
+
+  // Quick scheduling
+  const scheduleTaskToday = (goalId: string, taskId: string) => {
+    dispatch({ type: 'SCHEDULE_TASK_TODAY', payload: { goalId, taskId } });
+  };
+
+  const unscheduleTaskToday = (goalId: string, taskId: string) => {
+    dispatch({ type: 'UNSCHEDULE_TASK_TODAY', payload: { goalId, taskId } });
+  };
+
+  const toggleTaskScheduleToday = (goalId: string, taskId: string) => {
+    const goal = state.goals.find((g) => g.id === goalId);
+    if (!goal) return;
+
+    const task = findTaskRecursively(goal.tasks, taskId);
+    if (!task) return;
+
+    const today = getTodayISO();
+    if (task.scheduledDates.includes(today)) {
+      unscheduleTaskToday(goalId, taskId);
+    } else {
+      scheduleTaskToday(goalId, taskId);
+    }
+  };
+
   const value: AppContextType = {
     state,
     dispatch,
@@ -305,10 +524,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteGoal,
     addTask,
     updateTask,
+    updateTaskRecursive,
     deleteTask,
+    deleteTaskRecursive,
     toggleTaskCompletion,
     scheduleTaskForDate,
     unscheduleTaskFromDate,
+    addSubtask,
+    addTaskLink,
+    updateTaskLink,
+    deleteTaskLink,
+    scheduleTaskToday,
+    unscheduleTaskToday,
+    toggleTaskScheduleToday,
     reorderGoals,
     reorderTasks,
   };

@@ -1,4 +1,4 @@
-import type { AppState, Goal, RecurringTask, OneOffTask, Habit, Task } from '../types';
+import type { AppState, Goal, RecurringTask, OneOffTask, Habit, Task, TaskLink } from '../types';
 
 const STORAGE_KEY = 'todo-dashboard-data';
 
@@ -38,32 +38,89 @@ function generateSampleData(): AppState {
       title: 'Learn TypeScript',
       color: '#60a5fa',
       createdAt: twoDaysAgo,
-      notes: 'Focus on advanced types and generics',
+      notes: 'Focus on advanced types and generics. This is a multi-week learning goal to become proficient in TypeScript for better code quality.',
       tasks: [
         {
           id: 'task-1-1',
           goalId: 'goal-1',
           title: 'Complete TypeScript handbook',
           completed: false,
-          scheduledDates: [today, tomorrow],
+          scheduledDates: [today],
           completedDates: [],
-          quickLink: 'https://www.typescriptlang.org/docs/handbook/',
+          links: [
+            { id: 'link-1-1-1', title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs/handbook/' },
+            { id: 'link-1-1-2', title: 'TypeScript Playground', url: 'https://www.typescriptlang.org/play' },
+          ],
+          subtasks: [
+            {
+              id: 'task-1-1-1',
+              goalId: 'goal-1',
+              parentTaskId: 'task-1-1',
+              title: 'Read basics chapter',
+              completed: true,
+              scheduledDates: [yesterday],
+              completedDates: [yesterday],
+              links: [],
+              subtasks: [],
+            },
+            {
+              id: 'task-1-1-2',
+              goalId: 'goal-1',
+              parentTaskId: 'task-1-1',
+              title: 'Read generics chapter',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [
+                { id: 'link-1-1-2-1', title: 'Generics Deep Dive', url: 'https://www.typescriptlang.org/docs/handbook/2/generics.html' },
+              ],
+              subtasks: [],
+            },
+            {
+              id: 'task-1-1-3',
+              goalId: 'goal-1',
+              parentTaskId: 'task-1-1',
+              title: 'Read advanced types',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+          ],
         },
         {
           id: 'task-1-2',
           goalId: 'goal-1',
           title: 'Build a sample project',
           completed: false,
-          scheduledDates: [today],
+          scheduledDates: [],
           completedDates: [],
-        },
-        {
-          id: 'task-1-3',
-          goalId: 'goal-1',
-          title: 'Read about generics',
-          completed: true,
-          scheduledDates: [yesterday],
-          completedDates: [yesterday],
+          links: [],
+          subtasks: [
+            {
+              id: 'task-1-2-1',
+              goalId: 'goal-1',
+              parentTaskId: 'task-1-2',
+              title: 'Set up project structure',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+            {
+              id: 'task-1-2-2',
+              goalId: 'goal-1',
+              parentTaskId: 'task-1-2',
+              title: 'Implement core features',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+          ],
         },
       ],
     },
@@ -72,7 +129,7 @@ function generateSampleData(): AppState {
       title: 'Fitness Goals',
       color: '#4ade80',
       createdAt: twoDaysAgo,
-      notes: 'Aim for 3x week minimum',
+      notes: 'Aim for 3x week minimum. Track progress and adjust as needed.',
       tasks: [
         {
           id: 'task-2-1',
@@ -81,22 +138,55 @@ function generateSampleData(): AppState {
           completed: false,
           scheduledDates: [today],
           completedDates: [],
+          links: [
+            { id: 'link-2-1-1', title: 'Running Route', url: 'https://www.strava.com' },
+          ],
+          subtasks: [],
         },
         {
           id: 'task-2-2',
           goalId: 'goal-2',
           title: 'Strength training',
           completed: false,
-          scheduledDates: [tomorrow],
+          scheduledDates: [],
           completedDates: [],
+          links: [],
+          subtasks: [
+            {
+              id: 'task-2-2-1',
+              goalId: 'goal-2',
+              parentTaskId: 'task-2-2',
+              title: 'Upper body workout',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+            {
+              id: 'task-2-2-2',
+              goalId: 'goal-2',
+              parentTaskId: 'task-2-2',
+              title: 'Lower body workout',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+          ],
         },
         {
           id: 'task-2-3',
           goalId: 'goal-2',
           title: 'Yoga session',
           completed: false,
-          scheduledDates: [yesterday],
+          scheduledDates: [],
           completedDates: [],
+          links: [
+            { id: 'link-2-3-1', title: 'Yoga with Adriene', url: 'https://www.youtube.com/@yogawithadriene' },
+          ],
+          subtasks: [],
         },
       ],
     },
@@ -105,22 +195,50 @@ function generateSampleData(): AppState {
       title: 'Home Organization',
       color: '#c084fc',
       createdAt: yesterday,
+      notes: 'Spring cleaning project - tackle one room at a time.',
       tasks: [
         {
           id: 'task-3-1',
           goalId: 'goal-3',
           title: 'Clean garage',
           completed: false,
-          scheduledDates: [today],
+          scheduledDates: [],
           completedDates: [],
+          links: [],
+          subtasks: [
+            {
+              id: 'task-3-1-1',
+              goalId: 'goal-3',
+              parentTaskId: 'task-3-1',
+              title: 'Sort items into keep/donate/trash',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+            {
+              id: 'task-3-1-2',
+              goalId: 'goal-3',
+              parentTaskId: 'task-3-1',
+              title: 'Organize tools',
+              completed: false,
+              scheduledDates: [],
+              completedDates: [],
+              links: [],
+              subtasks: [],
+            },
+          ],
         },
         {
           id: 'task-3-2',
           goalId: 'goal-3',
           title: 'Organize closet',
           completed: false,
-          scheduledDates: [tomorrow],
+          scheduledDates: [],
           completedDates: [],
+          links: [],
+          subtasks: [],
         },
       ],
     },
@@ -255,12 +373,18 @@ export function loadState(): AppState {
       return sampleData;
     }
     const parsed = JSON.parse(stored);
+    // Migrate goals to new format (add links, subtasks if missing)
+    const migratedGoals = migrateGoals(parsed.goals || []);
     // Ensure selectedDate is always today when loading fresh
-    return {
+    const state: AppState = {
       ...getDefaultState(),
       ...parsed,
+      goals: migratedGoals,
       selectedDate: getTodayISO(),
     };
+    // Save migrated state
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return state;
   } catch (error) {
     console.error('Failed to load state from localStorage:', error);
     return generateSampleData();
@@ -299,14 +423,31 @@ export function createGoal(title: string, color: string): Goal {
 }
 
 // Helper to create a new Task
-export function createTask(goalId: string, title: string): Task {
+export function createTask(goalId: string, title: string, parentTaskId?: string): Task {
   return {
     id: generateId(),
     goalId,
+    parentTaskId,
     title,
     completed: false,
-    scheduledDates: [getTodayISO()], // Schedule for today by default
+    scheduledDates: [], // Don't schedule by default - user picks when to work on it
     completedDates: [],
+    links: [],
+    subtasks: [],
+  };
+}
+
+// Helper to create a new Subtask
+export function createSubtask(goalId: string, parentTaskId: string, title: string): Task {
+  return createTask(goalId, title, parentTaskId);
+}
+
+// Helper to create a new TaskLink
+export function createTaskLink(title: string, url: string): TaskLink {
+  return {
+    id: generateId(),
+    title,
+    url,
   };
 }
 
@@ -502,4 +643,158 @@ export function getDaysInMonth(year: number, month: number): number {
 // Get start day of month (0 = Sunday)
 export function getStartDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 1).getDay();
+}
+
+// Migrate a task to the new format (add links, subtasks if missing)
+export function migrateTask(task: Task): Task {
+  const migrated: Task = {
+    ...task,
+    links: task.links || [],
+    subtasks: (task.subtasks || []).map(migrateTask),
+  };
+
+  // Migrate quickLink to links array if exists and links is empty
+  if (task.quickLink && migrated.links.length === 0) {
+    migrated.links = [{
+      id: generateId(),
+      title: 'Quick Link',
+      url: task.quickLink,
+    }];
+  }
+
+  return migrated;
+}
+
+// Migrate goals to new format
+export function migrateGoals(goals: Goal[]): Goal[] {
+  return goals.map(goal => ({
+    ...goal,
+    tasks: goal.tasks.map(migrateTask),
+  }));
+}
+
+// Find a task recursively in a task tree
+export function findTaskRecursively(tasks: Task[], taskId: string): Task | null {
+  for (const task of tasks) {
+    if (task.id === taskId) {
+      return task;
+    }
+    const found = findTaskRecursively(task.subtasks || [], taskId);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
+// Find a task in goals
+export function findTaskInGoals(goals: Goal[], taskId: string): { task: Task; goal: Goal } | null {
+  for (const goal of goals) {
+    const task = findTaskRecursively(goal.tasks, taskId);
+    if (task) {
+      return { task, goal };
+    }
+  }
+  return null;
+}
+
+// Update a task recursively in a task tree
+export function updateTaskRecursively(tasks: Task[], taskId: string, updates: Partial<Task>): Task[] {
+  return tasks.map(task => {
+    if (task.id === taskId) {
+      return { ...task, ...updates };
+    }
+    return {
+      ...task,
+      subtasks: updateTaskRecursively(task.subtasks || [], taskId, updates),
+    };
+  });
+}
+
+// Delete a task recursively from a task tree
+export function deleteTaskRecursively(tasks: Task[], taskId: string): Task[] {
+  return tasks
+    .filter(task => task.id !== taskId)
+    .map(task => ({
+      ...task,
+      subtasks: deleteTaskRecursively(task.subtasks || [], taskId),
+    }));
+}
+
+// Add a subtask to a parent task
+export function addSubtaskToTask(tasks: Task[], parentTaskId: string, subtask: Task): Task[] {
+  return tasks.map(task => {
+    if (task.id === parentTaskId) {
+      return {
+        ...task,
+        subtasks: [...(task.subtasks || []), subtask],
+      };
+    }
+    return {
+      ...task,
+      subtasks: addSubtaskToTask(task.subtasks || [], parentTaskId, subtask),
+    };
+  });
+}
+
+// Count total tasks including subtasks
+export function countAllTasks(tasks: Task[]): number {
+  return tasks.reduce((count, task) => {
+    return count + 1 + countAllTasks(task.subtasks || []);
+  }, 0);
+}
+
+// Count completed tasks including subtasks
+export function countCompletedTasks(tasks: Task[]): number {
+  return tasks.reduce((count, task) => {
+    const thisTaskComplete = task.completed ? 1 : 0;
+    return count + thisTaskComplete + countCompletedTasks(task.subtasks || []);
+  }, 0);
+}
+
+// Flatten tasks with depth info for rendering
+export interface FlattenedTask {
+  task: Task;
+  depth: number;
+  hasChildren: boolean;
+  parentId?: string;
+}
+
+export function flattenTasks(tasks: Task[], depth: number = 0, parentId?: string): FlattenedTask[] {
+  const result: FlattenedTask[] = [];
+
+  for (const task of tasks) {
+    result.push({
+      task,
+      depth,
+      hasChildren: (task.subtasks || []).length > 0,
+      parentId,
+    });
+
+    if (task.subtasks && task.subtasks.length > 0) {
+      result.push(...flattenTasks(task.subtasks, depth + 1, task.id));
+    }
+  }
+
+  return result;
+}
+
+// Get all tasks scheduled for a date (including subtasks)
+export function getAllTasksForDate(goals: Goal[], date: string): Array<{ task: Task; goal: Goal; depth: number }> {
+  const result: Array<{ task: Task; goal: Goal; depth: number }> = [];
+
+  function collectTasks(tasks: Task[], goal: Goal, depth: number) {
+    for (const task of tasks) {
+      if (task.scheduledDates.includes(date)) {
+        result.push({ task, goal, depth });
+      }
+      collectTasks(task.subtasks || [], goal, depth + 1);
+    }
+  }
+
+  for (const goal of goals) {
+    collectTasks(goal.tasks, goal, 0);
+  }
+
+  return result;
 }

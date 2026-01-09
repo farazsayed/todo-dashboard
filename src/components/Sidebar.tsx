@@ -3,6 +3,7 @@ import type { Goal, RecurringTask, Habit } from '../types';
 import type { WeatherData } from '../utils/weather';
 import { useApp } from '../context/AppContext';
 import { PomodoroTimer } from './PomodoroTimer';
+import { TimezoneTool } from './TimezoneTool';
 import { getWeeklyStats, compareWeeks } from '../utils/stats';
 import { resetToSampleData } from '../utils/storage';
 
@@ -15,6 +16,7 @@ interface SidebarProps {
   onSelectHabit: (habit: Habit | null) => void;
   onQuickAddTask: () => void;
   onExpandGoals: () => void;
+  onScheduleTask: () => void;
   weather: WeatherData | null;
 }
 
@@ -27,6 +29,7 @@ export function Sidebar({
   onSelectHabit,
   onQuickAddTask,
   onExpandGoals,
+  onScheduleTask,
   weather,
 }: SidebarProps) {
   const { state, toggleTaskCompletion, addTask, dispatch } = useApp();
@@ -112,6 +115,15 @@ export function Sidebar({
             title="Quick Add"
           >
             <span className="text-lg font-bold">+</span>
+          </button>
+          <button
+            onClick={onScheduleTask}
+            className="w-10 h-10 bg-dark-tertiary rounded-lg flex items-center justify-center text-accent-blue hover:bg-dark-hover"
+            title="Schedule Goal Task"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
           </button>
           <button
             onClick={() => onSelectGoal(null)}
@@ -437,6 +449,15 @@ export function Sidebar({
             <span className="text-accent-green font-semibold">+</span> New Task
           </button>
           <button
+            onClick={onScheduleTask}
+            className="flex items-center gap-2.5 px-3 py-2.5 bg-transparent border border-dashed border-accent-blue/50 rounded-lg text-dark-text-secondary text-[13px] hover:border-accent-blue hover:text-dark-text-primary hover:bg-accent-blue/10 text-left"
+          >
+            <svg className="w-4 h-4 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Schedule Goal Task
+          </button>
+          <button
             onClick={() => onSelectRecurringTask(null)}
             className="flex items-center gap-2.5 px-3 py-2.5 bg-transparent border border-dashed border-dark-border rounded-lg text-dark-text-secondary text-[13px] hover:border-dark-text-muted hover:text-dark-text-primary hover:bg-dark-tertiary text-left"
           >
@@ -456,6 +477,9 @@ export function Sidebar({
           </button>
         </div>
       </div>
+
+      {/* Timezone Tool */}
+      <TimezoneTool />
 
       {/* Reset Data */}
       <div className="p-4">

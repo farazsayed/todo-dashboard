@@ -1,8 +1,19 @@
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export function Header() {
   const { state, setSelectedDate } = useApp();
   const { selectedDate } = state;
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [showProgressTooltip, setShowProgressTooltip] = useState(false);
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Get additional date context
   const date = new Date(selectedDate + 'T00:00:00');
@@ -14,6 +25,18 @@ export function Header() {
   const daysInYear = (date.getFullYear() % 4 === 0 &&
     (date.getFullYear() % 100 !== 0 || date.getFullYear() % 400 === 0)) ? 366 : 365;
   const daysLeft = daysInYear - dayOfYear;
+
+  // Calculate progress percentages
+  const now = new Date();
+  const dayProgress = ((now.getHours() * 60 + now.getMinutes()) / (24 * 60)) * 100;
+
+  const dayOfWeek = now.getDay() || 7; // Sunday = 7
+  const weekProgress = ((dayOfWeek - 1 + dayProgress / 100) / 7) * 100;
+
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthProgress = ((now.getDate() - 1 + dayProgress / 100) / daysInMonth) * 100;
+
+  const yearProgress = ((dayOfYear - 1 + dayProgress / 100) / daysInYear) * 100;
 
   const navigateDate = (days: number) => {
     const newDate = new Date(date);
@@ -30,6 +53,14 @@ export function Header() {
     weekday: 'long',
     month: 'short',
     day: 'numeric'
+  });
+
+  // Format time as HH:MM:SS
+  const formattedTime = currentTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
   });
 
   return (
@@ -68,11 +99,89 @@ export function Header() {
             📅
           </button>
         </div>
+
+        {/* Current Time */}
+        <span className="text-lg font-mono text-dark-text-secondary ml-2">
+          {formattedTime}
+        </span>
       </div>
 
-      <span className="text-[13px] text-dark-text-muted">
-        Week {weekNumber} · {daysLeft} days left in year
-      </span>
+      {/* Days left with hover tooltip */}
+      <div
+        className="relative"
+        onMouseEnter={() => setShowProgressTooltip(true)}
+        onMouseLeave={() => setShowProgressTooltip(false)}
+      >
+        <span className="text-[13px] text-dark-text-muted cursor-help">
+          Week {weekNumber} · {daysLeft} days left in year
+        </span>
+
+        {/* Progress Tooltip */}
+        {showProgressTooltip && (
+          <div className="absolute right-0 top-full mt-2 bg-dark-secondary border border-dark-border rounded-lg p-4 shadow-xl z-50 min-w-[220px]">
+            <div className="text-[12px] font-semibold text-dark-text-secondary mb-3 uppercase tracking-wide">
+              Time Progress
+            </div>
+            <div className="space-y-3">
+              {/* Day Progress */}
+              <div>
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-dark-text-secondary">Day</span>
+                  <span className="text-dark-text-primary font-mono">{dayProgress.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-dark-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent-blue rounded-full transition-all"
+                    style={{ width: `${dayProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Week Progress */}
+              <div>
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-dark-text-secondary">Week</span>
+                  <span className="text-dark-text-primary font-mono">{weekProgress.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-dark-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent-green rounded-full transition-all"
+                    style={{ width: `${weekProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Month Progress */}
+              <div>
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-dark-text-secondary">Month</span>
+                  <span className="text-dark-text-primary font-mono">{monthProgress.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-dark-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all"
+                    style={{ width: `${monthProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Year Progress */}
+              <div>
+                <div className="flex justify-between text-[12px] mb-1">
+                  <span className="text-dark-text-secondary">Year</span>
+                  <span className="text-dark-text-primary font-mono">{yearProgress.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 bg-dark-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-orange-500 rounded-full transition-all"
+                    style={{ width: `${yearProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

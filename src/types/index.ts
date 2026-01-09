@@ -1,3 +1,10 @@
+// Link resource for tasks
+export interface TaskLink {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export interface Goal {
   id: string;
   title: string;
@@ -10,11 +17,16 @@ export interface Goal {
 export interface Task {
   id: string;
   goalId: string;
+  parentTaskId?: string; // For subtasks - reference to parent task
   title: string;
   completed: boolean;
   scheduledDates: string[]; // dates this task is scheduled for (ISO date strings)
   completedDates: string[]; // dates this task was completed
   colorOverride?: string;
+  notes?: string; // Task-level notes
+  links: TaskLink[]; // Multiple resource links
+  subtasks: Task[]; // Nested subtasks
+  // Keep quickLink for backward compatibility during migration
   quickLink?: string;
 }
 
