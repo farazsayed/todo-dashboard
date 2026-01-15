@@ -1,7 +1,7 @@
 import { useApp } from '../context/AppContext';
 import {
   getComprehensiveWeeklyStats,
-  getMonthlyStats,
+  getComprehensiveMonthlyStats,
   compareWeeksComprehensive,
   getAllTasksCompletionForDate,
 } from '../utils/stats';
@@ -12,7 +12,7 @@ export function StatsView() {
   const { projects, habits, recurringTasks, oneOffTasks, selectedDate } = state;
 
   const weeklyStats = getComprehensiveWeeklyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
-  const monthlyStats = getMonthlyStats(projects, selectedDate);
+  const monthlyStats = getComprehensiveMonthlyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
   const weekComparison = compareWeeksComprehensive(projects, recurringTasks, oneOffTasks, habits, selectedDate);
 
   // Calculate habit stats

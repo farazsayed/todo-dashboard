@@ -12,6 +12,13 @@ export function PomodoroTimer() {
   const [autoLoop, setAutoLoop] = useState(true);
   const [youtubeAlarmUrl, setYoutubeAlarmUrl] = useState('');
   const intervalRef = useRef<number | null>(null);
+  // Use ref to always have current value in timer callback
+  const youtubeAlarmUrlRef = useRef(youtubeAlarmUrl);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    youtubeAlarmUrlRef.current = youtubeAlarmUrl;
+  }, [youtubeAlarmUrl]);
 
   useEffect(() => {
     if (isRunning && seconds > 0) {
@@ -39,10 +46,11 @@ export function PomodoroTimer() {
   }, [isRunning, seconds]);
 
   const handleTimerComplete = () => {
-    // Check if YouTube alarm URL is set
-    if (youtubeAlarmUrl.trim()) {
+    // Check if YouTube alarm URL is set (use ref for current value in callback)
+    const alarmUrl = youtubeAlarmUrlRef.current;
+    if (alarmUrl && alarmUrl.trim()) {
       try {
-        window.open(youtubeAlarmUrl, '_blank');
+        window.open(alarmUrl, '_blank');
       } catch (e) {
         // Fallback to default sound if popup blocked
         playDefaultAlarm();

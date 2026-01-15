@@ -103,7 +103,7 @@ export function compareWeeks(projects: Project[], currentDate: string): { differ
   };
 }
 
-// Get monthly stats
+// Get monthly stats (project tasks only - kept for backward compatibility)
 export function getMonthlyStats(projects: Project[], currentDate: string) {
   const date = new Date(currentDate + 'T00:00:00');
   const year = date.getFullYear();
@@ -132,6 +132,54 @@ export function getMonthlyStats(projects: Project[], currentDate: string) {
     totalCompleted += completed;
     totalTasks += tasksForDate.length;
   }
+
+  return {
+    avgCompletion,
+    totalCompleted,
+    totalTasks,
+  };
+}
+
+// Get comprehensive monthly stats including ALL task types
+export function getComprehensiveMonthlyStats(
+  projects: Project[],
+  recurringTasks: RecurringTask[],
+  oneOffTasks: OneOffTask[],
+  habits: Habit[],
+  currentDate: string
+) {
+  const date = new Date(currentDate + 'T00:00:00');
+  const year = date.getFullYear();
+  const month = date.getMonth();
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0);
+  const today = new Date(currentDate + 'T00:00:00');
+
+  // Only calculate up to today (not future dates)
+  const calcEndDate = endOfMonth > today ? today : endOfMonth;
+
+  let totalCompleted = 0;
+  let totalTasks = 0;
+  let totalPercentage = 0;
+  let daysWithTasks = 0;
+
+  for (let d = new Date(startOfMonth); d <= calcEndDate; d.setDate(d.getDate() + 1)) {
+    const dateStr = formatDateToLocal(d);
+    const { total, completed, percentage } = getAllTasksCompletionForDate(
+      projects, recurringTasks, oneOffTasks, habits, dateStr
+    );
+
+    totalTasks += total;
+    totalCompleted += completed;
+
+    if (total > 0) {
+      totalPercentage += percentage;
+      daysWithTasks++;
+    }
+  }
+
+  const avgCompletion = daysWithTasks > 0 ? Math.round(totalPercentage / daysWithTasks) : 0;
 
   return {
     avgCompletion,
