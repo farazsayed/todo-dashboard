@@ -2,9 +2,10 @@ import { useState } from 'react';
 import type { Task } from '../types';
 import { useApp } from '../context/AppContext';
 import { getTodayISO } from '../utils/storage';
+import { AddToTodayButton } from './AddToTodayButton';
 
 interface SubtaskListProps {
-  goalId: string;
+  projectId: string;
   parentTaskId: string;
   subtasks: Task[];
   depth?: number;
@@ -13,7 +14,7 @@ interface SubtaskListProps {
 }
 
 export function SubtaskList({
-  goalId,
+  projectId,
   parentTaskId,
   subtasks,
   depth = 0,
@@ -28,7 +29,7 @@ export function SubtaskList({
 
   const handleAdd = () => {
     if (newTitle.trim()) {
-      addSubtask(goalId, parentTaskId, newTitle.trim());
+      addSubtask(projectId, parentTaskId, newTitle.trim());
       setNewTitle('');
       setIsAdding(false);
     }
@@ -57,7 +58,7 @@ export function SubtaskList({
   const handleDelete = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Delete this subtask and all its children?')) {
-      deleteTaskRecursive(goalId, taskId);
+      deleteTaskRecursive(projectId, taskId);
     }
   };
 
@@ -104,7 +105,7 @@ export function SubtaskList({
                 checked={isCompletedToday}
                 onChange={(e) => {
                   e.stopPropagation();
-                  toggleTaskCompletion(goalId, subtask.id, today);
+                  toggleTaskCompletion(projectId, subtask.id, today);
                 }}
                 onClick={(e) => e.stopPropagation()}
                 className="w-4 h-4 flex-shrink-0"
@@ -133,6 +134,14 @@ export function SubtaskList({
                 </span>
               )}
 
+              {/* Add to today button */}
+              <AddToTodayButton
+                projectId={projectId}
+                taskId={subtask.id}
+                scheduledDates={subtask.scheduledDates}
+                size="sm"
+              />
+
               {/* Delete button */}
               <button
                 type="button"
@@ -148,7 +157,7 @@ export function SubtaskList({
             {/* Nested subtasks */}
             {hasChildren && isExpanded && depth < maxDepth && (
               <SubtaskList
-                goalId={goalId}
+                projectId={projectId}
                 parentTaskId={subtask.id}
                 subtasks={subtask.subtasks}
                 depth={depth + 1}

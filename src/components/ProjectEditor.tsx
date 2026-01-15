@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import type { Goal } from '../types';
+import type { Project } from '../types';
 import { COLORS } from '../types';
 import { useApp } from '../context/AppContext';
 
-interface GoalEditorProps {
-  goal: Goal | null;
+interface ProjectEditorProps {
+  project: Project | null;
   onClose: () => void;
 }
 
-export function GoalEditor({ goal, onClose }: GoalEditorProps) {
-  const { addGoal, updateGoal, deleteGoal } = useApp();
+export function ProjectEditor({ project, onClose }: ProjectEditorProps) {
+  const { addProject, updateProject, deleteProject, archiveProject } = useApp();
   const [title, setTitle] = useState('');
   const [color, setColor] = useState<string>(COLORS[0]);
   const [notes, setNotes] = useState('');
@@ -17,10 +17,10 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (goal) {
-      setTitle(goal.title);
-      setColor(goal.color);
-      setNotes(goal.notes || '');
+    if (project) {
+      setTitle(project.title);
+      setColor(project.color);
+      setNotes(project.notes || '');
     } else {
       setTitle('');
       setColor(COLORS[0]);
@@ -28,7 +28,7 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
     }
     setError('');
     setTouched(false);
-  }, [goal]);
+  }, [project]);
 
   const validateTitle = (value: string): string => {
     if (!value.trim()) {
@@ -64,22 +64,29 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
       return;
     }
 
-    if (goal) {
-      updateGoal({
-        ...goal,
+    if (project) {
+      updateProject({
+        ...project,
         title: title.trim(),
         color,
         notes: notes.trim() || undefined,
       });
     } else {
-      addGoal(title.trim(), color);
+      addProject(title.trim(), color);
     }
     onClose();
   };
 
   const handleDelete = () => {
-    if (goal && confirm('Delete this goal and all its tasks?')) {
-      deleteGoal(goal.id);
+    if (project && confirm('Delete this project and all its tasks?')) {
+      deleteProject(project.id);
+      onClose();
+    }
+  };
+
+  const handleArchive = () => {
+    if (project && confirm('Archive this project? You can restore it later from archived projects.')) {
+      archiveProject(project.id);
       onClose();
     }
   };
@@ -88,7 +95,7 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
     <div className="p-5">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-[13px] font-semibold text-dark-text-secondary uppercase tracking-wide">
-          {goal ? 'Edit Goal' : 'New Goal'}
+          {project ? 'Edit Project' : 'New Project'}
         </h2>
         <button
           onClick={onClose}
@@ -110,7 +117,7 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
             onBlur={handleTitleBlur}
-            placeholder="Enter goal title..."
+            placeholder="Enter project title..."
             autoFocus
             className={`w-full px-3.5 py-2.5 text-[14px] bg-dark-tertiary border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 ${
               error && touched
@@ -160,16 +167,28 @@ export function GoalEditor({ goal, onClose }: GoalEditorProps) {
             type="submit"
             className="flex-1 px-4 py-2.5 text-[14px] bg-accent-green text-dark-primary rounded-lg hover:bg-accent-green/90 font-medium"
           >
-            {goal ? 'Save' : 'Create'}
+            {project ? 'Save' : 'Create'}
           </button>
-          {goal && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="px-4 py-2.5 text-[14px] bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 font-medium"
-            >
-              Delete
-            </button>
+          {project && (
+            <>
+              <button
+                type="button"
+                onClick={handleArchive}
+                className="px-4 py-2.5 text-[14px] bg-dark-tertiary text-dark-text-secondary rounded-lg hover:bg-dark-hover font-medium"
+                title="Archive project"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2.5 text-[14px] bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 font-medium"
+              >
+                Delete
+              </button>
+            </>
           )}
         </div>
       </form>

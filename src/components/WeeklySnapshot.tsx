@@ -3,10 +3,10 @@ import { getWeeklyStats, compareWeeks } from '../utils/stats';
 
 export function WeeklySnapshot() {
   const { state } = useApp();
-  const { goals, selectedDate } = state;
+  const { projects, selectedDate } = state;
 
-  const weeklyStats = getWeeklyStats(goals, selectedDate);
-  const comparison = compareWeeks(goals, selectedDate);
+  const weeklyStats = getWeeklyStats(projects, selectedDate);
+  const comparison = compareWeeks(projects, selectedDate);
 
   return (
     <div className="p-4 flex-1 overflow-auto">

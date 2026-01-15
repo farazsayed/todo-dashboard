@@ -23,6 +23,10 @@
   --color-accent-yellow: #facc15;
   --color-streak-fire: #f97316;
 
+  /* Gradient colors */
+  --color-gradient-start: #60a5fa;
+  --color-gradient-end: #c084fc;
+
   /* Progress */
   --color-progress-bg: #2a2a2a;
 
@@ -137,4 +141,126 @@ input:focus-visible, button:focus-visible {
 
 .animate-slide-in {
   animation: slide-in 0.3s ease-out forwards;
+}
+
+/* Completion animation */
+@keyframes check-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes task-complete {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(74, 222, 128, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.animate-check {
+  animation: check-bounce 0.3s ease-out;
+}
+
+.animate-task-complete {
+  animation: task-complete 0.5s ease-out;
+}
+
+/* Toast slide-up animation */
+@keyframes toast-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toast-slide-up 0.3s ease-out forwards;
+}
+
+.animate-toast-out {
+  animation: toast-slide-down 0.3s ease-out forwards;
+}
+
+/* Button hover effects */
+.btn-scale {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-scale:hover {
+  transform: scale(1.02);
+}
+
+.btn-scale:active {
+  transform: scale(0.98);
+}
+
+/* Gradient text and backgrounds */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-purple));
+}
+
+.gradient-border {
+  border-image: linear-gradient(135deg, var(--color-accent-blue), var(--color-accent-purple)) 1;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --color-dark-primary: #f8fafc;
+  --color-dark-secondary: #ffffff;
+  --color-dark-tertiary: #f1f5f9;
+  --color-dark-hover: #e2e8f0;
+  --color-dark-border: #e2e8f0;
+  --color-dark-text-primary: #1e293b;
+  --color-dark-text-secondary: #64748b;
+  --color-dark-text-muted: #94a3b8;
+  --color-progress-bg: #e2e8f0;
+}
+
+[data-theme="light"] body {
+  background-color: var(--color-dark-primary);
+  color: var(--color-dark-text-primary);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--color-dark-secondary);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--color-dark-border);
+}
+
+[data-theme="light"] input[type="date"] {
+  color-scheme: light;
+}
+
+[data-theme="light"] input[type="checkbox"]:checked::after {
+  color: white;
+}
+
+/* Theme transition */
+body, .bg-dark-primary, .bg-dark-secondary, .bg-dark-tertiary,
+.text-dark-text-primary, .text-dark-text-secondary, .text-dark-text-muted,
+.border-dark-border {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }

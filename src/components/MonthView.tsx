@@ -1,10 +1,10 @@
 import { useApp } from '../context/AppContext';
-import { getTasksForDate, getRecurringTasksForDate, getTodayISO, getDaysInMonth, getStartDayOfMonth } from '../utils/storage';
+import { getTasksForDate, getRecurringTasksForDate, getTodayISO, getDaysInMonth, getStartDayOfMonth, formatDateToLocal } from '../utils/storage';
 import { getCompletionForDate } from '../utils/stats';
 
 export function MonthView() {
   const { state, setSelectedDate } = useApp();
-  const { selectedDate, goals, recurringTasks, oneOffTasks, habits } = state;
+  const { selectedDate, projects, recurringTasks, oneOffTasks, habits } = state;
   const today = getTodayISO();
 
   // Get month from selected date
@@ -21,7 +21,7 @@ export function MonthView() {
 
   const navigateMonth = (direction: number) => {
     const newDate = new Date(year, month + direction, 1);
-    setSelectedDate(newDate.toISOString().split('T')[0]);
+    setSelectedDate(formatDateToLocal(newDate));
   };
 
   // Generate calendar days
@@ -82,12 +82,12 @@ export function MonthView() {
           const isFuture = dateStr > today;
           const dayNum = new Date(dateStr + 'T00:00:00').getDate();
 
-          const tasksForDay = getTasksForDate(goals, dateStr);
+          const tasksForDay = getTasksForDate(projects, dateStr);
           const recurringForDay = getRecurringTasksForDate(recurringTasks, dateStr);
           const oneOffForDay = oneOffTasks.filter(t => t.dueDate === dateStr);
           const totalTasks = tasksForDay.length + recurringForDay.length + oneOffForDay.length + habits.length;
 
-          const completion = getCompletionForDate(goals, dateStr);
+          const completion = getCompletionForDate(projects, dateStr);
           const hasAnyTasks = totalTasks > 0;
 
           return (
@@ -142,7 +142,7 @@ export function MonthView() {
       <div className="flex items-center justify-center gap-4 mt-4 text-[11px] text-dark-text-muted">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-accent-blue" />
-          <span>Goal Tasks</span>
+          <span>Project Tasks</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-accent-orange" />

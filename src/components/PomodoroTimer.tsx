@@ -4,12 +4,13 @@ type TimerMode = 'work' | 'break';
 
 export function PomodoroTimer() {
   const [mode, setMode] = useState<TimerMode>('work');
-  const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
-  const [seconds, setSeconds] = useState(25 * 60);
+  const [workDuration, setWorkDuration] = useState(45);
+  const [breakDuration, setBreakDuration] = useState(15);
+  const [seconds, setSeconds] = useState(45 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [autoLoop, setAutoLoop] = useState(true);
+  const [youtubeAlarmUrl, setYoutubeAlarmUrl] = useState('');
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -38,6 +39,20 @@ export function PomodoroTimer() {
   }, [isRunning, seconds]);
 
   const handleTimerComplete = () => {
+    // Check if YouTube alarm URL is set
+    if (youtubeAlarmUrl.trim()) {
+      try {
+        window.open(youtubeAlarmUrl, '_blank');
+      } catch (e) {
+        // Fallback to default sound if popup blocked
+        playDefaultAlarm();
+      }
+    } else {
+      playDefaultAlarm();
+    }
+  };
+
+  const playDefaultAlarm = () => {
     try {
       const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBRV71fDTgjMGHm7A7+OZUQ4PVqzn77BdGQg+ltryxnIjBBqAzPLaizsIFG+67OihUBAMUqnk8LSfGwk3kcXzz4AuBSJ7xfDckz4JGGi76+qaUxEPV6zj8LNiGgk7m9byw3EiBxyByvLaiz4IFnO/8+KcTwwNVKfi8Lhhpg==');
       audio.play();
@@ -128,6 +143,24 @@ export function PomodoroTimer() {
               className="w-4 h-4"
             />
           </div>
+          <div className="pt-2 border-t border-dark-border">
+            <label className="text-[11px] text-dark-text-muted mb-1.5 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+              </svg>
+              YouTube Alarm (Optional)
+            </label>
+            <input
+              type="url"
+              value={youtubeAlarmUrl}
+              onChange={(e) => setYoutubeAlarmUrl(e.target.value)}
+              placeholder="Paste YouTube URL..."
+              className="w-full px-2 py-1.5 text-[11px] bg-dark-secondary border border-dark-border rounded text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:border-accent-blue"
+            />
+            <p className="text-[10px] text-dark-text-muted mt-1">
+              Opens video when timer ends
+            </p>
+          </div>
           <button
             onClick={handleEditToggle}
             className="w-full px-3 py-1.5 bg-accent-blue text-dark-primary rounded text-[12px] font-medium hover:bg-accent-blue/90"
@@ -155,7 +188,16 @@ export function PomodoroTimer() {
           {formatTime(seconds)}
         </span>
         {mode === 'break' && <span className="text-accent-green text-[11px]">Break</span>}
-        {autoLoop && <span className="text-[10px] text-dark-text-muted ml-auto">🔁</span>}
+        <span className="flex items-center gap-1 ml-auto">
+          {youtubeAlarmUrl && (
+            <span title="YouTube alarm set">
+              <svg className="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+              </svg>
+            </span>
+          )}
+          {autoLoop && <span className="text-[10px] text-dark-text-muted">🔁</span>}
+        </span>
       </button>
       <button
         onClick={handleEditToggle}

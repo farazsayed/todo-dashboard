@@ -1,41 +1,41 @@
 import { useState, useEffect } from 'react';
-import type { Task, Goal, TaskLink } from '../types';
+import type { Task, Project, TaskLink } from '../types';
 import { useApp } from '../context/AppContext';
 import { findTaskRecursively } from '../utils/storage';
 import { TaskLinkEditor } from './TaskLinkEditor';
 import { SubtaskList } from './SubtaskList';
 
 interface TaskEditorProps {
-  goalId: string;
+  projectId: string;
   taskId: string;
   onClose: () => void;
 }
 
-export function TaskEditor({ goalId, taskId, onClose }: TaskEditorProps) {
+export function TaskEditor({ projectId, taskId, onClose }: TaskEditorProps) {
   const { state, updateTaskRecursive, deleteTaskRecursive, addTaskLink, updateTaskLink, deleteTaskLink } = useApp();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [goal, setGoal] = useState<Goal | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [task, setTask] = useState<Task | null>(null);
 
   useEffect(() => {
-    const foundGoal = state.goals.find(g => g.id === goalId);
-    if (foundGoal) {
-      setGoal(foundGoal);
+    const foundProject = state.projects.find(g => g.id === projectId);
+    if (foundProject) {
+      setProject(foundProject);
       // Find task recursively (could be a subtask)
-      const foundTask = findTaskRecursively(foundGoal.tasks, taskId);
+      const foundTask = findTaskRecursively(foundProject.tasks, taskId);
       if (foundTask) {
         setTask(foundTask);
         setTitle(foundTask.title);
         setNotes(foundTask.notes || '');
       }
     }
-  }, [goalId, taskId, state.goals]);
+  }, [projectId, taskId, state.projects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && task) {
-      updateTaskRecursive(goalId, taskId, {
+      updateTaskRecursive(projectId, taskId, {
         title: title.trim(),
         notes: notes.trim() || undefined,
       });
@@ -45,24 +45,24 @@ export function TaskEditor({ goalId, taskId, onClose }: TaskEditorProps) {
 
   const handleDelete = () => {
     if (confirm('Delete this task and all its subtasks?')) {
-      deleteTaskRecursive(goalId, taskId);
+      deleteTaskRecursive(projectId, taskId);
       onClose();
     }
   };
 
   const handleAddLink = (link: TaskLink) => {
-    addTaskLink(goalId, taskId, link.title, link.url);
+    addTaskLink(projectId, taskId, link.title, link.url);
   };
 
   const handleUpdateLink = (link: TaskLink) => {
-    updateTaskLink(goalId, taskId, link);
+    updateTaskLink(projectId, taskId, link);
   };
 
   const handleDeleteLink = (linkId: string) => {
-    deleteTaskLink(goalId, taskId, linkId);
+    deleteTaskLink(projectId, taskId, linkId);
   };
 
-  if (!goal || !task) {
+  if (!project || !task) {
     return null;
   }
 
@@ -86,14 +86,14 @@ export function TaskEditor({ goalId, taskId, onClose }: TaskEditorProps) {
         </button>
       </div>
 
-      {/* Goal indicator */}
+      {/* Project indicator */}
       <div className="mb-4">
         <div className="flex items-center gap-2 text-[12px] text-dark-text-muted">
           <div
             className="w-2.5 h-2.5 rounded-sm"
-            style={{ backgroundColor: goal.color }}
+            style={{ backgroundColor: project.color }}
           />
-          <span>{goal.title}</span>
+          <span>{project.title}</span>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export function TaskEditor({ goalId, taskId, onClose }: TaskEditorProps) {
           <div className="bg-dark-tertiary border border-dark-border rounded-lg p-2">
             {subtaskCount > 0 ? (
               <SubtaskList
-                goalId={goalId}
+                projectId={projectId}
                 parentTaskId={taskId}
                 subtasks={task.subtasks || []}
                 depth={0}
@@ -156,7 +156,7 @@ export function TaskEditor({ goalId, taskId, onClose }: TaskEditorProps) {
               />
             ) : (
               <SubtaskList
-                goalId={goalId}
+                projectId={projectId}
                 parentTaskId={taskId}
                 subtasks={[]}
                 depth={0}

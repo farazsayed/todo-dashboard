@@ -7,6 +7,7 @@ interface TaskLinkEditorProps {
   onAddLink: (link: TaskLink) => void;
   onUpdateLink: (link: TaskLink) => void;
   onDeleteLink: (linkId: string) => void;
+  title?: string;
 }
 
 export function TaskLinkEditor({
@@ -14,6 +15,7 @@ export function TaskLinkEditor({
   onAddLink,
   onUpdateLink,
   onDeleteLink,
+  title = 'Resource Links',
 }: TaskLinkEditorProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -79,7 +81,7 @@ export function TaskLinkEditor({
   return (
     <div className="space-y-2">
       <label className="block text-[12px] font-medium text-dark-text-secondary mb-2">
-        Resources / Links
+        {title}
       </label>
 
       {/* Existing links */}

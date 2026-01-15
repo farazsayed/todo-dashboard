@@ -1,13 +1,13 @@
-import type { Goal, RecurringTask, Habit, OneOffTask } from '../types';
-import { GoalEditor } from './GoalEditor';
+import type { Project, RecurringTask, Habit, OneOffTask } from '../types';
+import { ProjectEditor } from './ProjectEditor';
 import { TaskEditor } from './TaskEditor';
 import { RecurringTaskEditor } from './RecurringTaskEditor';
 import { HabitEditor } from './HabitEditor';
 import { OneOffTaskEditor } from './OneOffTaskEditor';
 
 interface EditorPanelProps {
-  selectedGoal: Goal | null | undefined;
-  selectedTask: { goalId: string; taskId: string } | null;
+  selectedProject: Project | null | undefined;
+  selectedTask: { projectId: string; taskId: string } | null;
   selectedRecurringTask: RecurringTask | null | undefined;
   selectedHabit: Habit | null | undefined;
   selectedOneOffTask: OneOffTask | null;
@@ -15,7 +15,7 @@ interface EditorPanelProps {
 }
 
 export function EditorPanel({
-  selectedGoal,
+  selectedProject,
   selectedTask,
   selectedRecurringTask,
   selectedHabit,
@@ -34,12 +34,12 @@ export function EditorPanel({
       <div className="fixed top-0 right-0 h-full w-[380px] bg-dark-secondary border-l border-dark-border z-50 overflow-y-auto animate-slide-in">
         {selectedTask ? (
           <TaskEditor
-            goalId={selectedTask.goalId}
+            projectId={selectedTask.projectId}
             taskId={selectedTask.taskId}
             onClose={onClose}
           />
-        ) : selectedGoal !== undefined ? (
-          <GoalEditor goal={selectedGoal} onClose={onClose} />
+        ) : selectedProject !== undefined ? (
+          <ProjectEditor project={selectedProject} onClose={onClose} />
         ) : selectedRecurringTask !== undefined ? (
           <RecurringTaskEditor task={selectedRecurringTask} onClose={onClose} />
         ) : selectedHabit !== undefined ? (

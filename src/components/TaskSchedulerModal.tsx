@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import type { Task, Goal } from '../types';
-import { getTodayISO } from '../utils/storage';
+import type { Task, Project } from '../types';
+import { getTodayISO, formatDateToLocal } from '../utils/storage';
 
 interface TaskSchedulerModalProps {
   onClose: () => void;
@@ -9,67 +9,49 @@ interface TaskSchedulerModalProps {
 
 interface FlatTask {
   task: Task;
-  goal: Goal;
+  project: Project;
   depth: number;
   path: string;
 }
 
 export function TaskSchedulerModal({ onClose }: TaskSchedulerModalProps) {
   const { state, updateTaskRecursive } = useApp();
-  const { goals } = state;
-  const [selectedGoalId, setSelectedGoalId] = useState<string>('');
+  const { projects } = state;
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [dateOption, setDateOption] = useState<'today' | 'tomorrow' | 'custom'>('today');
   const [customDate, setCustomDate] = useState('');
-  const [searchGoal, setSearchGoal] = useState('');
-  const [searchTask, setSearchTask] = useState('');
 
   const today = getTodayISO();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowISO = tomorrow.toISOString().split('T')[0];
+  const tomorrowISO = formatDateToLocal(tomorrow);
 
-  // Get filtered goals
-  const filteredGoals = useMemo(() => {
-    if (!searchGoal.trim()) return goals;
-    return goals.filter(g =>
-      g.title.toLowerCase().includes(searchGoal.toLowerCase())
-    );
-  }, [goals, searchGoal]);
-
-  // Get flattened tasks for selected goal
+  // Get flattened tasks for selected project
   const flatTasks = useMemo((): FlatTask[] => {
-    if (!selectedGoalId) return [];
-    const goal = goals.find(g => g.id === selectedGoalId);
-    if (!goal) return [];
+    if (!selectedProjectId) return [];
+    const project = projects.find(g => g.id === selectedProjectId);
+    if (!project) return [];
 
     const result: FlatTask[] = [];
     const flatten = (tasks: Task[], depth: number, pathPrefix: string) => {
       tasks.forEach(task => {
         const path = pathPrefix ? `${pathPrefix} → ${task.title}` : task.title;
-        result.push({ task, goal, depth, path });
+        result.push({ task, project, depth, path });
         if (task.subtasks && task.subtasks.length > 0) {
           flatten(task.subtasks, depth + 1, path);
         }
       });
     };
-    flatten(goal.tasks, 0, '');
+    flatten(project.tasks, 0, '');
     return result;
-  }, [selectedGoalId, goals]);
+  }, [selectedProjectId, projects]);
 
-  // Filter tasks based on search
-  const filteredTasks = useMemo(() => {
-    if (!searchTask.trim()) return flatTasks;
-    return flatTasks.filter(ft =>
-      ft.task.title.toLowerCase().includes(searchTask.toLowerCase())
-    );
-  }, [flatTasks, searchTask]);
-
-  const selectedGoal = goals.find(g => g.id === selectedGoalId);
+  const selectedProject = projects.find(g => g.id === selectedProjectId);
   const selectedTask = flatTasks.find(ft => ft.task.id === selectedTaskId);
 
   const handleSchedule = () => {
-    if (!selectedGoalId || !selectedTaskId) return;
+    if (!selectedProjectId || !selectedTaskId) return;
 
     let scheduleDate: string;
     switch (dateOption) {
@@ -87,7 +69,7 @@ export function TaskSchedulerModal({ onClose }: TaskSchedulerModalProps) {
 
     const task = flatTasks.find(ft => ft.task.id === selectedTaskId)?.task;
     if (task && !task.scheduledDates.includes(scheduleDate)) {
-      updateTaskRecursive(selectedGoalId, selectedTaskId, {
+      updateTaskRecursive(selectedProjectId, selectedTaskId, {
         scheduledDates: [...task.scheduledDates, scheduleDate],
       });
     }
@@ -95,7 +77,7 @@ export function TaskSchedulerModal({ onClose }: TaskSchedulerModalProps) {
     onClose();
   };
 
-  const canSchedule = selectedGoalId && selectedTaskId && (dateOption !== 'custom' || customDate);
+  const canSchedule = selectedProjectId && selectedTaskId && (dateOption !== 'custom' || customDate);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -116,139 +98,61 @@ export function TaskSchedulerModal({ onClose }: TaskSchedulerModalProps) {
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Goal selector */}
+          {/* Project selector - Dropdown */}
           <div>
             <label className="block text-[12px] font-medium text-dark-text-secondary mb-2">
-              Select Goal
+              Select Project
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchGoal}
-                onChange={(e) => {
-                  setSearchGoal(e.target.value);
-                  setSelectedGoalId('');
-                  setSelectedTaskId('');
-                }}
-                placeholder="Search goals..."
-                className="w-full px-3 py-2.5 text-[14px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
-              />
-              {searchGoal && !selectedGoalId && filteredGoals.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-dark-tertiary border border-dark-border rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
-                  {filteredGoals.map(goal => (
-                    <button
-                      key={goal.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedGoalId(goal.id);
-                        setSearchGoal(goal.title);
-                        setSelectedTaskId('');
-                        setSearchTask('');
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-dark-secondary text-left"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-sm flex-shrink-0"
-                        style={{ backgroundColor: goal.color }}
-                      />
-                      <span className="text-[14px] text-dark-text-primary">{goal.title}</span>
-                      <span className="text-[12px] text-dark-text-muted ml-auto">
-                        {goal.tasks.length} tasks
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {selectedGoal && (
+            <select
+              value={selectedProjectId}
+              onChange={(e) => {
+                setSelectedProjectId(e.target.value);
+                setSelectedTaskId('');
+              }}
+              className="w-full px-3 py-2.5 text-[14px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50 cursor-pointer"
+            >
+              <option value="">Choose a project...</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.title} ({project.tasks.length} tasks)
+                </option>
+              ))}
+            </select>
+            {selectedProject && (
               <div className="flex items-center gap-2 mt-2 px-2">
                 <div
                   className="w-2.5 h-2.5 rounded-sm"
-                  style={{ backgroundColor: selectedGoal.color }}
+                  style={{ backgroundColor: selectedProject.color }}
                 />
-                <span className="text-[13px] text-dark-text-primary">{selectedGoal.title}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedGoalId('');
-                    setSearchGoal('');
-                    setSelectedTaskId('');
-                    setSearchTask('');
-                  }}
-                  className="text-dark-text-muted hover:text-dark-text-primary ml-auto"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <span className="text-[13px] text-dark-text-secondary">
+                  {selectedProject.tasks.length} tasks available
+                </span>
               </div>
             )}
           </div>
 
-          {/* Task selector */}
-          {selectedGoalId && (
+          {/* Task selector - Dropdown */}
+          {selectedProjectId && (
             <div>
               <label className="block text-[12px] font-medium text-dark-text-secondary mb-2">
                 Select Task
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTask}
-                  onChange={(e) => {
-                    setSearchTask(e.target.value);
-                    setSelectedTaskId('');
-                  }}
-                  placeholder="Search tasks..."
-                  className="w-full px-3 py-2.5 text-[14px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
-                />
-                {!selectedTaskId && filteredTasks.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-dark-tertiary border border-dark-border rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
-                    {filteredTasks.map(ft => (
-                      <button
-                        key={ft.task.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTaskId(ft.task.id);
-                          setSearchTask(ft.task.title);
-                        }}
-                        className="w-full flex items-start gap-2 px-3 py-2.5 hover:bg-dark-secondary text-left"
-                        style={{ paddingLeft: `${(ft.depth * 12) + 12}px` }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[14px] text-dark-text-primary block">{ft.task.title}</span>
-                          {ft.depth > 0 && (
-                            <span className="text-[11px] text-dark-text-muted truncate block">{ft.path}</span>
-                          )}
-                        </div>
-                        {ft.task.scheduledDates.includes(today) && (
-                          <span className="text-[10px] text-accent-green bg-accent-green/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                            Today
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {selectedTask && (
+              <select
+                value={selectedTaskId}
+                onChange={(e) => setSelectedTaskId(e.target.value)}
+                className="w-full px-3 py-2.5 text-[14px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50 cursor-pointer"
+              >
+                <option value="">Choose a task...</option>
+                {flatTasks.map(ft => (
+                  <option key={ft.task.id} value={ft.task.id}>
+                    {'─'.repeat(ft.depth)} {ft.task.title}
+                    {ft.task.scheduledDates.includes(today) ? ' (already scheduled today)' : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedTask && selectedTask.depth > 0 && (
                 <div className="mt-2 px-2">
-                  <span className="text-[13px] text-dark-text-primary">{selectedTask.task.title}</span>
-                  {selectedTask.depth > 0 && (
-                    <span className="text-[11px] text-dark-text-muted block">{selectedTask.path}</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedTaskId('');
-                      setSearchTask('');
-                    }}
-                    className="text-dark-text-muted hover:text-dark-text-primary mt-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <span className="text-[11px] text-dark-text-muted">Path: {selectedTask.path}</span>
                 </div>
               )}
             </div>

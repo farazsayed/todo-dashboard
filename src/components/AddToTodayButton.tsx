@@ -2,14 +2,14 @@ import { useApp } from '../context/AppContext';
 import { getTodayISO } from '../utils/storage';
 
 interface AddToTodayButtonProps {
-  goalId: string;
+  projectId: string;
   taskId: string;
   scheduledDates: string[];
   size?: 'sm' | 'md';
 }
 
 export function AddToTodayButton({
-  goalId,
+  projectId,
   taskId,
   scheduledDates,
   size = 'md',
@@ -26,7 +26,7 @@ export function AddToTodayButton({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        toggleTaskScheduleToday(goalId, taskId);
+        toggleTaskScheduleToday(projectId, taskId);
       }}
       className={`${buttonSize} rounded transition-colors flex-shrink-0 ${
         isScheduledToday

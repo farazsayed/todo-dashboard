@@ -1,10 +1,10 @@
 import { useApp } from '../context/AppContext';
-import { getTasksForDate, getTodayISO } from '../utils/storage';
+import { getTasksForDate, getTodayISO, formatDateToLocal } from '../utils/storage';
 import { getCompletionForDate } from '../utils/stats';
 
 export function WeekStrip() {
   const { state, setSelectedDate } = useApp();
-  const { selectedDate, goals } = state;
+  const { selectedDate, projects } = state;
   const today = getTodayISO();
 
   // Get the week containing the selected date (Monday to Sunday)
@@ -15,7 +15,7 @@ export function WeekStrip() {
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(selectedDateObj);
     date.setDate(selectedDateObj.getDate() + mondayOffset + i);
-    return date.toISOString().split('T')[0];
+    return formatDateToLocal(date);
   });
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -27,8 +27,8 @@ export function WeekStrip() {
         const isSelected = dateStr === selectedDate;
         const isFuture = dateStr > today;
 
-        const tasksForDay = getTasksForDate(goals, dateStr);
-        const completion = getCompletionForDate(goals, dateStr);
+        const tasksForDay = getTasksForDate(projects, dateStr);
+        const completion = getCompletionForDate(projects, dateStr);
         const hasTasks = tasksForDay.length > 0;
         const dayNum = new Date(dateStr + 'T00:00:00').getDate();
 

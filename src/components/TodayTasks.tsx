@@ -3,18 +3,18 @@ import { useApp } from '../context/AppContext';
 import { getTasksForDate, getCarryoverTasks, formatRelativeDate } from '../utils/storage';
 
 interface TodayTasksProps {
-  onSelectTask: (goalId: string, taskId: string) => void;
+  onSelectTask: (projectId: string, taskId: string) => void;
 }
 
 export function TodayTasks({ onSelectTask }: TodayTasksProps) {
   const { state, toggleTaskCompletion, scheduleTaskForDate } = useApp();
-  const { selectedDate, goals } = state;
+  const { selectedDate, projects } = state;
 
   // Get tasks scheduled for this date
-  const scheduledTasks = getTasksForDate(goals, selectedDate);
+  const scheduledTasks = getTasksForDate(projects, selectedDate);
 
   // Get carryover tasks (only if viewing today or future dates)
-  const carryoverTasks = getCarryoverTasks(goals, selectedDate);
+  const carryoverTasks = getCarryoverTasks(projects, selectedDate);
 
   const totalTasks = scheduledTasks.length + carryoverTasks.length;
   const completedCount = [
@@ -24,12 +24,12 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
 
   const progress = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
 
-  const handleCarryoverTaskCheck = (task: Task, goalId: string) => {
+  const handleCarryoverTaskCheck = (task: Task, projectId: string) => {
     // When checking a carryover task, automatically schedule it for today
     if (!task.scheduledDates.includes(selectedDate)) {
-      scheduleTaskForDate(goalId, task.id, selectedDate);
+      scheduleTaskForDate(projectId, task.id, selectedDate);
     }
-    toggleTaskCompletion(goalId, task.id, selectedDate);
+    toggleTaskCompletion(projectId, task.id, selectedDate);
   };
 
   return (
@@ -60,14 +60,14 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
             Carried Over
           </h2>
           <div className="space-y-2">
-            {carryoverTasks.map(({ task, goal, originalDate }) => (
+            {carryoverTasks.map(({ task, project, originalDate }) => (
               <div key={task.id} className="flex items-center gap-2 group bg-white rounded px-3 py-2 hover:shadow-sm transition-shadow">
                 <input
                   type="checkbox"
                   checked={task.completedDates.includes(selectedDate)}
-                  onChange={() => handleCarryoverTaskCheck(task, goal.id)}
+                  onChange={() => handleCarryoverTaskCheck(task, project.id)}
                   className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                  style={{ accentColor: goal.color }}
+                  style={{ accentColor: project.color }}
                 />
                 <div className="flex-1 min-w-0">
                   <span
@@ -82,7 +82,7 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
                   <div className="flex items-center gap-2 mt-0.5">
                     <div
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: goal.color }}
+                      style={{ backgroundColor: project.color }}
                     />
                     <span className="text-xs text-amber-600">
                       {formatRelativeDate(originalDate, selectedDate)}
@@ -90,7 +90,7 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
                   </div>
                 </div>
                 <button
-                  onClick={() => onSelectTask(goal.id, task.id)}
+                  onClick={() => onSelectTask(project.id, task.id)}
                   className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 p-1 transition-opacity"
                   title="Edit task"
                 >
@@ -104,7 +104,7 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
         </section>
       )}
 
-      {/* Scheduled Tasks */}
+      {/* Project Tasks */}
       <section className="bg-white border border-gray-200 rounded-lg p-4">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
           Today's Tasks
@@ -115,14 +115,14 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
           </p>
         ) : (
           <div className="space-y-2">
-            {scheduledTasks.map(({ task, goal }) => (
+            {scheduledTasks.map(({ task, project }) => (
               <div key={task.id} className="flex items-center gap-2 group p-2 -mx-2 rounded hover:bg-gray-50 transition-colors">
                 <input
                   type="checkbox"
                   checked={task.completedDates.includes(selectedDate)}
-                  onChange={() => toggleTaskCompletion(goal.id, task.id, selectedDate)}
+                  onChange={() => toggleTaskCompletion(project.id, task.id, selectedDate)}
                   className="w-4 h-4 rounded border-gray-300 cursor-pointer transition-all"
-                  style={{ accentColor: goal.color }}
+                  style={{ accentColor: project.color }}
                 />
                 <div className="flex-1 min-w-0">
                   <span
@@ -137,13 +137,13 @@ export function TodayTasks({ onSelectTask }: TodayTasksProps) {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <div
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: goal.color }}
+                      style={{ backgroundColor: project.color }}
                     />
-                    <span className="text-xs text-gray-500">{goal.title}</span>
+                    <span className="text-xs text-gray-500">{project.title}</span>
                   </div>
                 </div>
                 <button
-                  onClick={() => onSelectTask(goal.id, task.id)}
+                  onClick={() => onSelectTask(project.id, task.id)}
                   className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 p-1 transition-opacity"
                   title="Edit task"
                 >

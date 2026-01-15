@@ -1,5 +1,5 @@
-import type { Goal } from '../types';
-import { getTasksForDate } from './storage';
+import type { Project } from '../types';
+import { getTasksForDate, formatDateToLocal } from './storage';
 
 // Get start and end dates for a week (Sunday to Saturday)
 export function getWeekBounds(dateStr: string): { start: string; end: string } {
@@ -13,14 +13,14 @@ export function getWeekBounds(dateStr: string): { start: string; end: string } {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
 
   return {
-    start: startOfWeek.toISOString().split('T')[0],
-    end: endOfWeek.toISOString().split('T')[0],
+    start: formatDateToLocal(startOfWeek),
+    end: formatDateToLocal(endOfWeek),
   };
 }
 
 // Get completion percentage for a specific date
-export function getCompletionForDate(goals: Goal[], date: string): number {
-  const tasksForDate = getTasksForDate(goals, date);
+export function getCompletionForDate(projects: Project[], date: string): number {
+  const tasksForDate = getTasksForDate(projects, date);
   if (tasksForDate.length === 0) return 0;
 
   const completed = tasksForDate.filter(({ task }) =>
@@ -31,7 +31,7 @@ export function getCompletionForDate(goals: Goal[], date: string): number {
 }
 
 // Calculate average completion for a date range
-export function getAverageCompletion(goals: Goal[], startDate: string, endDate: string): number {
+export function getAverageCompletion(projects: Project[], startDate: string, endDate: string): number {
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');
 
@@ -39,11 +39,11 @@ export function getAverageCompletion(goals: Goal[], startDate: string, endDate: 
   let daysWithTasks = 0;
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
-    const tasksForDate = getTasksForDate(goals, dateStr);
+    const dateStr = formatDateToLocal(d);
+    const tasksForDate = getTasksForDate(projects, dateStr);
 
     if (tasksForDate.length > 0) {
-      totalCompletion += getCompletionForDate(goals, dateStr);
+      totalCompletion += getCompletionForDate(projects, dateStr);
       daysWithTasks++;
     }
   }
@@ -52,18 +52,18 @@ export function getAverageCompletion(goals: Goal[], startDate: string, endDate: 
 }
 
 // Get weekly stats for current week
-export function getWeeklyStats(goals: Goal[], currentDate: string) {
+export function getWeeklyStats(projects: Project[], currentDate: string) {
   const { start, end } = getWeekBounds(currentDate);
-  const avgCompletion = getAverageCompletion(goals, start, end);
+  const avgCompletion = getAverageCompletion(projects, start, end);
 
   // Find best day of the week
   let bestDay = '';
   let bestCompletion = -1;
 
   for (let d = new Date(start + 'T00:00:00'); d <= new Date(end + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
-    const completion = getCompletionForDate(goals, dateStr);
-    const tasksCount = getTasksForDate(goals, dateStr).length;
+    const dateStr = formatDateToLocal(d);
+    const completion = getCompletionForDate(projects, dateStr);
+    const tasksCount = getTasksForDate(projects, dateStr).length;
 
     if (tasksCount > 0 && completion > bestCompletion) {
       bestCompletion = completion;
@@ -79,7 +79,7 @@ export function getWeeklyStats(goals: Goal[], currentDate: string) {
 }
 
 // Compare current week to previous week
-export function compareWeeks(goals: Goal[], currentDate: string): { difference: number; direction: 'up' | 'down' | 'same' } {
+export function compareWeeks(projects: Project[], currentDate: string): { difference: number; direction: 'up' | 'down' | 'same' } {
   const currentWeek = getWeekBounds(currentDate);
 
   // Get previous week bounds
@@ -88,11 +88,11 @@ export function compareWeeks(goals: Goal[], currentDate: string): { difference: 
   const prevWeekStart = new Date(prevWeekEnd);
   prevWeekStart.setDate(prevWeekEnd.getDate() - 6);
 
-  const currentAvg = getAverageCompletion(goals, currentWeek.start, currentWeek.end);
+  const currentAvg = getAverageCompletion(projects, currentWeek.start, currentWeek.end);
   const prevAvg = getAverageCompletion(
-    goals,
-    prevWeekStart.toISOString().split('T')[0],
-    prevWeekEnd.toISOString().split('T')[0]
+    projects,
+    formatDateToLocal(prevWeekStart),
+    formatDateToLocal(prevWeekEnd)
   );
 
   const difference = currentAvg - prevAvg;
@@ -104,7 +104,7 @@ export function compareWeeks(goals: Goal[], currentDate: string): { difference: 
 }
 
 // Get monthly stats
-export function getMonthlyStats(goals: Goal[], currentDate: string) {
+export function getMonthlyStats(projects: Project[], currentDate: string) {
   const date = new Date(currentDate + 'T00:00:00');
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -113,9 +113,9 @@ export function getMonthlyStats(goals: Goal[], currentDate: string) {
   const endOfMonth = new Date(year, month + 1, 0);
 
   const avgCompletion = getAverageCompletion(
-    goals,
-    startOfMonth.toISOString().split('T')[0],
-    endOfMonth.toISOString().split('T')[0]
+    projects,
+    formatDateToLocal(startOfMonth),
+    formatDateToLocal(endOfMonth)
   );
 
   // Count total tasks completed this month
@@ -123,8 +123,8 @@ export function getMonthlyStats(goals: Goal[], currentDate: string) {
   let totalTasks = 0;
 
   for (let d = new Date(startOfMonth); d <= endOfMonth; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
-    const tasksForDate = getTasksForDate(goals, dateStr);
+    const dateStr = formatDateToLocal(d);
+    const tasksForDate = getTasksForDate(projects, dateStr);
     const completed = tasksForDate.filter(({ task }) =>
       task.completedDates.includes(dateStr)
     ).length;
@@ -141,7 +141,7 @@ export function getMonthlyStats(goals: Goal[], currentDate: string) {
 }
 
 // Get task count for a date range
-export function getTaskCountForRange(goals: Goal[], startDate: string, endDate: string): { total: number; completed: number } {
+export function getTaskCountForRange(projects: Project[], startDate: string, endDate: string): { total: number; completed: number } {
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');
 
@@ -149,8 +149,8 @@ export function getTaskCountForRange(goals: Goal[], startDate: string, endDate: 
   let completed = 0;
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
-    const tasksForDate = getTasksForDate(goals, dateStr);
+    const dateStr = formatDateToLocal(d);
+    const tasksForDate = getTasksForDate(projects, dateStr);
 
     total += tasksForDate.length;
     completed += tasksForDate.filter(({ task }) =>

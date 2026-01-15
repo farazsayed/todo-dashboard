@@ -1,17 +1,26 @@
-import type { AppState, Goal, RecurringTask, OneOffTask, Habit, Task, TaskLink } from '../types';
+import type { AppState, Project, RecurringTask, OneOffTask, Habit, Task, TaskLink } from '../types';
 
 const STORAGE_KEY = 'todo-dashboard-data';
 
-// Get today's date as ISO string (YYYY-MM-DD)
-export function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+// Format a Date object to local YYYY-MM-DD string
+// This avoids timezone issues with toISOString() which returns UTC
+export function formatDateToLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-// Get date offset by days
+// Get today's date as ISO string (YYYY-MM-DD) in local timezone
+export function getTodayISO(): string {
+  return formatDateToLocal(new Date());
+}
+
+// Get date offset by days in local timezone
 export function getDateOffset(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
+  return formatDateToLocal(date);
 }
 
 // Format a date for display
@@ -32,17 +41,17 @@ function generateSampleData(): AppState {
   const twoDaysAgo = getDateOffset(-2);
   const tomorrow = getDateOffset(1);
 
-  const goals: Goal[] = [
+  const projects: Project[] = [
     {
-      id: 'goal-1',
+      id: 'project-1',
       title: 'Learn TypeScript',
       color: '#60a5fa',
       createdAt: twoDaysAgo,
-      notes: 'Focus on advanced types and generics. This is a multi-week learning goal to become proficient in TypeScript for better code quality.',
+      notes: 'Focus on advanced types and generics. This is a multi-week learning project to become proficient in TypeScript for better code quality.',
       tasks: [
         {
           id: 'task-1-1',
-          goalId: 'goal-1',
+          projectId: 'project-1',
           title: 'Complete TypeScript handbook',
           completed: false,
           scheduledDates: [today],
@@ -54,7 +63,7 @@ function generateSampleData(): AppState {
           subtasks: [
             {
               id: 'task-1-1-1',
-              goalId: 'goal-1',
+              projectId: 'project-1',
               parentTaskId: 'task-1-1',
               title: 'Read basics chapter',
               completed: true,
@@ -65,7 +74,7 @@ function generateSampleData(): AppState {
             },
             {
               id: 'task-1-1-2',
-              goalId: 'goal-1',
+              projectId: 'project-1',
               parentTaskId: 'task-1-1',
               title: 'Read generics chapter',
               completed: false,
@@ -78,7 +87,7 @@ function generateSampleData(): AppState {
             },
             {
               id: 'task-1-1-3',
-              goalId: 'goal-1',
+              projectId: 'project-1',
               parentTaskId: 'task-1-1',
               title: 'Read advanced types',
               completed: false,
@@ -91,7 +100,7 @@ function generateSampleData(): AppState {
         },
         {
           id: 'task-1-2',
-          goalId: 'goal-1',
+          projectId: 'project-1',
           title: 'Build a sample project',
           completed: false,
           scheduledDates: [],
@@ -100,7 +109,7 @@ function generateSampleData(): AppState {
           subtasks: [
             {
               id: 'task-1-2-1',
-              goalId: 'goal-1',
+              projectId: 'project-1',
               parentTaskId: 'task-1-2',
               title: 'Set up project structure',
               completed: false,
@@ -111,7 +120,7 @@ function generateSampleData(): AppState {
             },
             {
               id: 'task-1-2-2',
-              goalId: 'goal-1',
+              projectId: 'project-1',
               parentTaskId: 'task-1-2',
               title: 'Implement core features',
               completed: false,
@@ -125,7 +134,7 @@ function generateSampleData(): AppState {
       ],
     },
     {
-      id: 'goal-2',
+      id: 'project-2',
       title: 'Fitness Goals',
       color: '#4ade80',
       createdAt: twoDaysAgo,
@@ -133,7 +142,7 @@ function generateSampleData(): AppState {
       tasks: [
         {
           id: 'task-2-1',
-          goalId: 'goal-2',
+          projectId: 'project-2',
           title: 'Morning run - 5km',
           completed: false,
           scheduledDates: [today],
@@ -145,7 +154,7 @@ function generateSampleData(): AppState {
         },
         {
           id: 'task-2-2',
-          goalId: 'goal-2',
+          projectId: 'project-2',
           title: 'Strength training',
           completed: false,
           scheduledDates: [],
@@ -154,7 +163,7 @@ function generateSampleData(): AppState {
           subtasks: [
             {
               id: 'task-2-2-1',
-              goalId: 'goal-2',
+              projectId: 'project-2',
               parentTaskId: 'task-2-2',
               title: 'Upper body workout',
               completed: false,
@@ -165,7 +174,7 @@ function generateSampleData(): AppState {
             },
             {
               id: 'task-2-2-2',
-              goalId: 'goal-2',
+              projectId: 'project-2',
               parentTaskId: 'task-2-2',
               title: 'Lower body workout',
               completed: false,
@@ -178,7 +187,7 @@ function generateSampleData(): AppState {
         },
         {
           id: 'task-2-3',
-          goalId: 'goal-2',
+          projectId: 'project-2',
           title: 'Yoga session',
           completed: false,
           scheduledDates: [],
@@ -191,7 +200,7 @@ function generateSampleData(): AppState {
       ],
     },
     {
-      id: 'goal-3',
+      id: 'project-3',
       title: 'Home Organization',
       color: '#c084fc',
       createdAt: yesterday,
@@ -199,7 +208,7 @@ function generateSampleData(): AppState {
       tasks: [
         {
           id: 'task-3-1',
-          goalId: 'goal-3',
+          projectId: 'project-3',
           title: 'Clean garage',
           completed: false,
           scheduledDates: [],
@@ -208,7 +217,7 @@ function generateSampleData(): AppState {
           subtasks: [
             {
               id: 'task-3-1-1',
-              goalId: 'goal-3',
+              projectId: 'project-3',
               parentTaskId: 'task-3-1',
               title: 'Sort items into keep/donate/trash',
               completed: false,
@@ -219,7 +228,7 @@ function generateSampleData(): AppState {
             },
             {
               id: 'task-3-1-2',
-              goalId: 'goal-3',
+              projectId: 'project-3',
               parentTaskId: 'task-3-1',
               title: 'Organize tools',
               completed: false,
@@ -232,7 +241,7 @@ function generateSampleData(): AppState {
         },
         {
           id: 'task-3-2',
-          goalId: 'goal-3',
+          projectId: 'project-3',
           title: 'Organize closet',
           completed: false,
           scheduledDates: [],
@@ -254,6 +263,7 @@ function generateSampleData(): AppState {
         startDate: twoDaysAgo,
       },
       completedDates: [yesterday],
+      skippedDates: [],
       quickLink: 'https://zoom.us/j/example',
     },
     {
@@ -266,6 +276,7 @@ function generateSampleData(): AppState {
         startDate: twoDaysAgo,
       },
       completedDates: [],
+      skippedDates: [],
     },
     {
       id: 'recurring-3',
@@ -277,6 +288,7 @@ function generateSampleData(): AppState {
         startDate: twoDaysAgo,
       },
       completedDates: [],
+      skippedDates: [],
     },
   ];
 
@@ -340,24 +352,30 @@ function generateSampleData(): AppState {
   ];
 
   return {
-    goals,
+    projects,
+    archivedProjects: [],
     recurringTasks,
     oneOffTasks,
     habits,
+    readingList: [],
     selectedDate: today,
     viewMode: 'day',
+    theme: 'dark',
   };
 }
 
 // Get default empty state
 export function getDefaultState(): AppState {
   return {
-    goals: [],
+    projects: [],
+    archivedProjects: [],
     recurringTasks: [],
     oneOffTasks: [],
     habits: [],
+    readingList: [],
     selectedDate: getTodayISO(),
     viewMode: 'day',
+    theme: 'dark',
   };
 }
 
@@ -373,13 +391,17 @@ export function loadState(): AppState {
       return sampleData;
     }
     const parsed = JSON.parse(stored);
-    // Migrate goals to new format (add links, subtasks if missing)
-    const migratedGoals = migrateGoals(parsed.goals || []);
+    // Migrate projects to new format (add links, subtasks if missing)
+    // Support both old 'goals' key and new 'projects' key for backward compatibility
+    const rawProjects = parsed.projects || parsed.goals || [];
+    const migratedProjects = migrateProjects(rawProjects);
+    const archivedProjects = parsed.archivedProjects || parsed.archivedGoals || [];
     // Ensure selectedDate is always today when loading fresh
     const state: AppState = {
       ...getDefaultState(),
       ...parsed,
-      goals: migratedGoals,
+      projects: migratedProjects,
+      archivedProjects: archivedProjects,
       selectedDate: getTodayISO(),
     };
     // Save migrated state
@@ -406,13 +428,21 @@ export function resetToSampleData(): AppState {
   return generateSampleData();
 }
 
+// Clear all data and start fresh
+export function clearAllData(): AppState {
+  localStorage.removeItem(STORAGE_KEY);
+  const emptyState = getDefaultState();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyState));
+  return emptyState;
+}
+
 // Generate a unique ID
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-// Helper to create a new Goal
-export function createGoal(title: string, color: string): Goal {
+// Helper to create a new Project
+export function createProject(title: string, color: string): Project {
   return {
     id: generateId(),
     title,
@@ -422,11 +452,14 @@ export function createGoal(title: string, color: string): Goal {
   };
 }
 
+// Alias for backward compatibility
+export const createGoal = createProject;
+
 // Helper to create a new Task
-export function createTask(goalId: string, title: string, parentTaskId?: string): Task {
+export function createTask(projectId: string, title: string, parentTaskId?: string): Task {
   return {
     id: generateId(),
-    goalId,
+    projectId,
     parentTaskId,
     title,
     completed: false,
@@ -438,8 +471,8 @@ export function createTask(goalId: string, title: string, parentTaskId?: string)
 }
 
 // Helper to create a new Subtask
-export function createSubtask(goalId: string, parentTaskId: string, title: string): Task {
-  return createTask(goalId, title, parentTaskId);
+export function createSubtask(projectId: string, parentTaskId: string, title: string): Task {
+  return createTask(projectId, title, parentTaskId);
 }
 
 // Helper to create a new TaskLink
@@ -466,6 +499,7 @@ export function createRecurringTask(
       startDate: getTodayISO(),
     },
     completedDates: [],
+    skippedDates: [],
   };
 }
 
@@ -498,38 +532,56 @@ export function createHabit(
   };
 }
 
-// Get all tasks scheduled for a specific date
-export function getTasksForDate(goals: Goal[], date: string) {
-  const tasks: Array<{ task: Task; goal: Goal }> = [];
+// Get all tasks scheduled for a specific date (including subtasks)
+export function getTasksForDate(projects: Project[], date: string) {
+  const tasks: Array<{ task: Task; project: Project }> = [];
 
-  goals.forEach(goal => {
-    goal.tasks.forEach(task => {
+  // Helper function to recursively find scheduled tasks
+  const collectScheduledTasks = (taskList: Task[], project: Project) => {
+    taskList.forEach(task => {
       if (task.scheduledDates.includes(date)) {
-        tasks.push({ task, goal });
+        tasks.push({ task, project });
+      }
+      // Check subtasks recursively
+      if (task.subtasks && task.subtasks.length > 0) {
+        collectScheduledTasks(task.subtasks, project);
       }
     });
+  };
+
+  projects.forEach(project => {
+    collectScheduledTasks(project.tasks, project);
   });
 
   return tasks;
 }
 
 // Get carryover tasks (tasks scheduled for dates before today that weren't completed)
-export function getCarryoverTasks(goals: Goal[], currentDate: string) {
-  const carryoverTasks: Array<{ task: Task; goal: Goal; originalDate: string }> = [];
+export function getCarryoverTasks(projects: Project[], currentDate: string) {
+  const carryoverTasks: Array<{ task: Task; project: Project; originalDate: string }> = [];
   const today = currentDate;
 
-  goals.forEach(goal => {
-    goal.tasks.forEach(task => {
+  // Helper function to recursively find carryover tasks
+  const collectCarryoverTasks = (taskList: Task[], project: Project) => {
+    taskList.forEach(task => {
       // Find dates before today where task was scheduled but not completed
       task.scheduledDates.forEach(scheduledDate => {
         if (scheduledDate < today && !task.completedDates.includes(scheduledDate)) {
           // Only add if not already scheduled for today
           if (!task.scheduledDates.includes(today)) {
-            carryoverTasks.push({ task, goal, originalDate: scheduledDate });
+            carryoverTasks.push({ task, project, originalDate: scheduledDate });
           }
         }
       });
+      // Check subtasks recursively
+      if (task.subtasks && task.subtasks.length > 0) {
+        collectCarryoverTasks(task.subtasks, project);
+      }
     });
+  };
+
+  projects.forEach(project => {
+    collectCarryoverTasks(project.tasks, project);
   });
 
   // Remove duplicates (keep most recent original date)
@@ -565,12 +617,24 @@ export function isRecurringTaskDueOnDate(task: RecurringTask, dateStr: string): 
   // Task can't be due before it was created
   if (date < startDate) return false;
 
+  // Check if this date was skipped
+  if (task.skippedDates?.includes(dateStr)) return false;
+
+  const dayOfWeek = date.getDay();
+
   if (task.schedule.type === 'daily') {
     return true;
   }
 
+  if (task.schedule.type === 'weekdays') {
+    return dayOfWeek >= 1 && dayOfWeek <= 5; // Mon-Fri
+  }
+
+  if (task.schedule.type === 'weekends') {
+    return dayOfWeek === 0 || dayOfWeek === 6; // Sat-Sun
+  }
+
   if (task.schedule.type === 'weekly') {
-    const dayOfWeek = date.getDay();
     return task.schedule.days?.includes(dayOfWeek) || false;
   }
 
@@ -578,6 +642,29 @@ export function isRecurringTaskDueOnDate(task: RecurringTask, dateStr: string): 
     const interval = task.schedule.interval || 1;
     const daysDiff = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     return daysDiff % interval === 0;
+  }
+
+  if (task.schedule.type === 'monthly') {
+    const dayOfMonth = date.getDate();
+
+    // Simple day of month (e.g., "15th of every month")
+    if (task.schedule.monthDay) {
+      return dayOfMonth === task.schedule.monthDay;
+    }
+
+    // Specific weekday of specific week (e.g., "first Monday")
+    if (task.schedule.monthWeek !== undefined && task.schedule.monthWeekday !== undefined) {
+      if (dayOfWeek !== task.schedule.monthWeekday) return false;
+
+      const weekOfMonth = Math.ceil(dayOfMonth / 7);
+      if (task.schedule.monthWeek === -1) {
+        // Last occurrence of weekday in month
+        const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        const remainingDays = lastDayOfMonth - dayOfMonth;
+        return remainingDays < 7;
+      }
+      return weekOfMonth === task.schedule.monthWeek;
+    }
   }
 
   return false;
@@ -599,10 +686,10 @@ export function calculateHabitStreak(completedDates: string[], referenceDate: st
   let currentDate = new Date(reference);
 
   // Check if completed today or yesterday (streak is still active)
-  const today = reference.toISOString().split('T')[0];
+  const today = formatDateToLocal(reference);
   const yesterday = new Date(reference);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = formatDateToLocal(yesterday);
 
   if (!sortedDates.includes(today) && !sortedDates.includes(yesterdayStr)) {
     return 0; // Streak broken
@@ -610,7 +697,7 @@ export function calculateHabitStreak(completedDates: string[], referenceDate: st
 
   // Count backwards from today
   for (let i = 0; i < sortedDates.length; i++) {
-    const checkDate = currentDate.toISOString().split('T')[0];
+    const checkDate = formatDateToLocal(currentDate);
 
     if (sortedDates.includes(checkDate)) {
       streak++;
@@ -665,13 +752,16 @@ export function migrateTask(task: Task): Task {
   return migrated;
 }
 
-// Migrate goals to new format
-export function migrateGoals(goals: Goal[]): Goal[] {
-  return goals.map(goal => ({
-    ...goal,
-    tasks: goal.tasks.map(migrateTask),
+// Migrate projects to new format
+export function migrateProjects(projects: Project[]): Project[] {
+  return projects.map(project => ({
+    ...project,
+    tasks: project.tasks.map(migrateTask),
   }));
 }
+
+// Alias for backward compatibility
+export const migrateGoals = migrateProjects;
 
 // Find a task recursively in a task tree
 export function findTaskRecursively(tasks: Task[], taskId: string): Task | null {
@@ -687,16 +777,19 @@ export function findTaskRecursively(tasks: Task[], taskId: string): Task | null 
   return null;
 }
 
-// Find a task in goals
-export function findTaskInGoals(goals: Goal[], taskId: string): { task: Task; goal: Goal } | null {
-  for (const goal of goals) {
-    const task = findTaskRecursively(goal.tasks, taskId);
+// Find a task in projects
+export function findTaskInProjects(projects: Project[], taskId: string): { task: Task; project: Project } | null {
+  for (const project of projects) {
+    const task = findTaskRecursively(project.tasks, taskId);
     if (task) {
-      return { task, goal };
+      return { task, project };
     }
   }
   return null;
 }
+
+// Alias for backward compatibility
+export const findTaskInGoals = findTaskInProjects;
 
 // Update a task recursively in a task tree
 export function updateTaskRecursively(tasks: Task[], taskId: string, updates: Partial<Task>): Task[] {
@@ -780,20 +873,20 @@ export function flattenTasks(tasks: Task[], depth: number = 0, parentId?: string
 }
 
 // Get all tasks scheduled for a date (including subtasks)
-export function getAllTasksForDate(goals: Goal[], date: string): Array<{ task: Task; goal: Goal; depth: number }> {
-  const result: Array<{ task: Task; goal: Goal; depth: number }> = [];
+export function getAllTasksForDate(projects: Project[], date: string): Array<{ task: Task; project: Project; depth: number }> {
+  const result: Array<{ task: Task; project: Project; depth: number }> = [];
 
-  function collectTasks(tasks: Task[], goal: Goal, depth: number) {
+  function collectTasks(tasks: Task[], project: Project, depth: number) {
     for (const task of tasks) {
       if (task.scheduledDates.includes(date)) {
-        result.push({ task, goal, depth });
+        result.push({ task, project, depth });
       }
-      collectTasks(task.subtasks || [], goal, depth + 1);
+      collectTasks(task.subtasks || [], project, depth + 1);
     }
   }
 
-  for (const goal of goals) {
-    collectTasks(goal.tasks, goal, 0);
+  for (const project of projects) {
+    collectTasks(project.tasks, project, 0);
   }
 
   return result;

@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react';
-import type { Goal, Task } from '../types';
+import type { Project, Task } from '../types';
 import { useApp } from '../context/AppContext';
 
-interface GoalCardProps {
-  goal: Goal;
-  onSelectGoal: (goal: Goal) => void;
-  onSelectTask: (goalId: string, taskId: string) => void;
+interface ProjectCardProps {
+  project: Project;
+  onSelectProject: (project: Project) => void;
+  onSelectTask: (projectId: string, taskId: string) => void;
 }
 
-export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
+export function ProjectCard({ project, onSelectProject, onSelectTask }: ProjectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { state, addTask, toggleTaskCompletion, scheduleTaskForDate, unscheduleTaskFromDate, reorderTasks } = useApp();
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -51,7 +51,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
     e.preventDefault();
     if (!draggedTaskId || draggedTaskId === targetTaskId) return;
 
-    const tasks = [...goal.tasks];
+    const tasks = [...project.tasks];
     const draggedIndex = tasks.findIndex(t => t.id === draggedTaskId);
     const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
 
@@ -61,18 +61,18 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
     const [draggedTask] = tasks.splice(draggedIndex, 1);
     tasks.splice(targetIndex, 0, draggedTask);
 
-    reorderTasks(goal.id, tasks);
+    reorderTasks(project.id, tasks);
     setDragOverTaskId(null);
   };
 
-  const completedTasks = goal.tasks.filter(t => t.completed).length;
-  const totalTasks = goal.tasks.length;
+  const completedTasks = project.tasks.filter(t => t.completed).length;
+  const totalTasks = project.tasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTaskTitle.trim()) {
-      addTask(goal.id, newTaskTitle.trim());
+      addTask(project.id, newTaskTitle.trim());
       setNewTaskTitle('');
       setIsAddingTask(false);
     }
@@ -81,9 +81,9 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
   return (
     <div
       className="border rounded-lg overflow-hidden transition-shadow duration-200 hover:shadow-md"
-      style={{ borderLeftColor: goal.color, borderLeftWidth: '4px' }}
+      style={{ borderLeftColor: project.color, borderLeftWidth: '4px' }}
     >
-      {/* Goal Header */}
+      {/* Project Header */}
       <div className="bg-white p-4">
         <div className="flex items-center justify-between">
           <button
@@ -95,12 +95,12 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
             </span>
-            <h3 className="font-medium text-gray-900 group-hover:text-gray-700 transition-colors">{goal.title}</h3>
+            <h3 className="font-medium text-gray-900 group-hover:text-gray-700 transition-colors">{project.title}</h3>
           </button>
           <button
-            onClick={() => onSelectGoal(goal)}
+            onClick={() => onSelectProject(project)}
             className="text-gray-400 hover:text-gray-600 p-1 transition-colors"
-            title="Edit goal"
+            title="Edit project"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -119,7 +119,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
               className="h-full rounded-full transition-all duration-300"
               style={{
                 width: `${progress}%`,
-                backgroundColor: goal.color
+                backgroundColor: project.color
               }}
             />
           </div>
@@ -133,7 +133,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
         }`}
       >
         <div className="p-4 space-y-2">
-          {goal.tasks.map(task => {
+          {project.tasks.map(task => {
             const isScheduled = task.scheduledDates.includes(selectedDate);
             const isDragOver = dragOverTaskId === task.id;
 
@@ -159,9 +159,9 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
                 <input
                   type="checkbox"
                   checked={task.completed}
-                  onChange={() => toggleTaskCompletion(goal.id, task.id, selectedDate)}
+                  onChange={() => toggleTaskCompletion(project.id, task.id, selectedDate)}
                   className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                  style={{ accentColor: goal.color }}
+                  style={{ accentColor: project.color }}
                 />
                 <span
                   className={`flex-1 text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}
@@ -172,7 +172,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
                 {/* Schedule/Unschedule button */}
                 {isScheduled ? (
                   <button
-                    onClick={() => unscheduleTaskFromDate(goal.id, task.id, selectedDate)}
+                    onClick={() => unscheduleTaskFromDate(project.id, task.id, selectedDate)}
                     className="opacity-0 group-hover:opacity-100 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-opacity"
                     title="Remove from this day"
                   >
@@ -180,7 +180,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => scheduleTaskForDate(goal.id, task.id, selectedDate)}
+                    onClick={() => scheduleTaskForDate(project.id, task.id, selectedDate)}
                     className="opacity-0 group-hover:opacity-100 px-2 py-0.5 text-xs border border-gray-300 text-gray-600 rounded hover:bg-gray-100 transition-opacity"
                     title="Add to this day"
                   >
@@ -189,7 +189,7 @@ export function GoalCard({ goal, onSelectGoal, onSelectTask }: GoalCardProps) {
                 )}
 
                 <button
-                  onClick={() => onSelectTask(goal.id, task.id)}
+                  onClick={() => onSelectTask(project.id, task.id)}
                   className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 p-1 transition-opacity"
                   title="Edit task"
                 >
