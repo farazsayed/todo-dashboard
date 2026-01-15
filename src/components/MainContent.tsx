@@ -657,11 +657,11 @@ function TaskItem({
 
       {/* Collapsible Subtasks */}
       {isExpanded && (
-        <div className="ml-8 mt-1 space-y-1">
+        <div className="mt-1 space-y-1">
           {allSubtasks.map(subtask => (
             <div
               key={subtask.id}
-              className="flex items-center gap-2.5 px-3 py-2 bg-dark-secondary rounded-lg group/subtask"
+              className="flex items-center gap-3.5 px-4 py-2 bg-dark-secondary rounded-lg group/subtask ml-[30px]"
             >
               <input
                 type="checkbox"
@@ -673,7 +673,7 @@ function TaskItem({
                     onToggleProjectSubtask(subtask.id);
                   }
                 }}
-                className="w-4 h-4"
+                className="w-5 h-5"
               />
               <span className={`flex-1 text-[13px] ${subtask.completed ? 'text-dark-text-muted line-through' : 'text-dark-text-primary'}`}>
                 {subtask.title}
@@ -696,7 +696,7 @@ function TaskItem({
           {onAddSubtask && (
             <>
               {isAddingSubtask ? (
-                <div className="flex items-center gap-2 px-3 py-2">
+                <div className="flex items-center gap-2 px-4 py-2 ml-[30px]">
                   <input
                     type="text"
                     value={newSubtaskTitle}
@@ -733,7 +733,7 @@ function TaskItem({
               ) : (
                 <button
                   onClick={() => setIsAddingSubtask(true)}
-                  className="flex items-center gap-2 px-3 py-2 text-[12px] text-dark-text-muted hover:text-dark-text-secondary"
+                  className="flex items-center gap-2 px-4 py-2 ml-[30px] text-[12px] text-dark-text-muted hover:text-dark-text-secondary"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
