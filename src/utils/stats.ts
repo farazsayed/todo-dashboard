@@ -18,197 +18,6 @@ export function getWeekBounds(dateStr: string): { start: string; end: string } {
   };
 }
 
-// Get completion percentage for a specific date
-export function getCompletionForDate(projects: Project[], date: string): number {
-  const tasksForDate = getTasksForDate(projects, date);
-  if (tasksForDate.length === 0) return 0;
-
-  const completed = tasksForDate.filter(({ task }) =>
-    task.completedDates.includes(date)
-  ).length;
-
-  return Math.round((completed / tasksForDate.length) * 100);
-}
-
-// Calculate average completion for a date range
-export function getAverageCompletion(projects: Project[], startDate: string, endDate: string): number {
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
-
-  let totalCompletion = 0;
-  let daysWithTasks = 0;
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = formatDateToLocal(d);
-    const tasksForDate = getTasksForDate(projects, dateStr);
-
-    if (tasksForDate.length > 0) {
-      totalCompletion += getCompletionForDate(projects, dateStr);
-      daysWithTasks++;
-    }
-  }
-
-  return daysWithTasks > 0 ? Math.round(totalCompletion / daysWithTasks) : 0;
-}
-
-// Get weekly stats for current week
-export function getWeeklyStats(projects: Project[], currentDate: string) {
-  const { start, end } = getWeekBounds(currentDate);
-  const avgCompletion = getAverageCompletion(projects, start, end);
-
-  // Find best day of the week
-  let bestDay = '';
-  let bestCompletion = -1;
-
-  for (let d = new Date(start + 'T00:00:00'); d <= new Date(end + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
-    const dateStr = formatDateToLocal(d);
-    const completion = getCompletionForDate(projects, dateStr);
-    const tasksCount = getTasksForDate(projects, dateStr).length;
-
-    if (tasksCount > 0 && completion > bestCompletion) {
-      bestCompletion = completion;
-      bestDay = d.toLocaleDateString('en-US', { weekday: 'long' });
-    }
-  }
-
-  return {
-    avgCompletion,
-    bestDay: bestDay || 'None',
-    bestCompletion,
-  };
-}
-
-// Compare current week to previous week
-export function compareWeeks(projects: Project[], currentDate: string): { difference: number; direction: 'up' | 'down' | 'same' } {
-  const currentWeek = getWeekBounds(currentDate);
-
-  // Get previous week bounds
-  const prevWeekEnd = new Date(currentWeek.start + 'T00:00:00');
-  prevWeekEnd.setDate(prevWeekEnd.getDate() - 1);
-  const prevWeekStart = new Date(prevWeekEnd);
-  prevWeekStart.setDate(prevWeekEnd.getDate() - 6);
-
-  const currentAvg = getAverageCompletion(projects, currentWeek.start, currentWeek.end);
-  const prevAvg = getAverageCompletion(
-    projects,
-    formatDateToLocal(prevWeekStart),
-    formatDateToLocal(prevWeekEnd)
-  );
-
-  const difference = currentAvg - prevAvg;
-
-  return {
-    difference: Math.abs(difference),
-    direction: difference > 0 ? 'up' : difference < 0 ? 'down' : 'same',
-  };
-}
-
-// Get monthly stats (project tasks only - kept for backward compatibility)
-export function getMonthlyStats(projects: Project[], currentDate: string) {
-  const date = new Date(currentDate + 'T00:00:00');
-  const year = date.getFullYear();
-  const month = date.getMonth();
-
-  const startOfMonth = new Date(year, month, 1);
-  const endOfMonth = new Date(year, month + 1, 0);
-
-  const avgCompletion = getAverageCompletion(
-    projects,
-    formatDateToLocal(startOfMonth),
-    formatDateToLocal(endOfMonth)
-  );
-
-  // Count total tasks completed this month
-  let totalCompleted = 0;
-  let totalTasks = 0;
-
-  for (let d = new Date(startOfMonth); d <= endOfMonth; d.setDate(d.getDate() + 1)) {
-    const dateStr = formatDateToLocal(d);
-    const tasksForDate = getTasksForDate(projects, dateStr);
-    const completed = tasksForDate.filter(({ task }) =>
-      task.completedDates.includes(dateStr)
-    ).length;
-
-    totalCompleted += completed;
-    totalTasks += tasksForDate.length;
-  }
-
-  return {
-    avgCompletion,
-    totalCompleted,
-    totalTasks,
-  };
-}
-
-// Get comprehensive monthly stats including ALL task types
-export function getComprehensiveMonthlyStats(
-  projects: Project[],
-  recurringTasks: RecurringTask[],
-  oneOffTasks: OneOffTask[],
-  habits: Habit[],
-  currentDate: string
-) {
-  const date = new Date(currentDate + 'T00:00:00');
-  const year = date.getFullYear();
-  const month = date.getMonth();
-
-  const startOfMonth = new Date(year, month, 1);
-  const endOfMonth = new Date(year, month + 1, 0);
-  const today = new Date(currentDate + 'T00:00:00');
-
-  // Only calculate up to today (not future dates)
-  const calcEndDate = endOfMonth > today ? today : endOfMonth;
-
-  let totalCompleted = 0;
-  let totalTasks = 0;
-  let totalPercentage = 0;
-  let daysWithTasks = 0;
-
-  for (let d = new Date(startOfMonth); d <= calcEndDate; d.setDate(d.getDate() + 1)) {
-    const dateStr = formatDateToLocal(d);
-    const { total, completed, percentage } = getAllTasksCompletionForDate(
-      projects, recurringTasks, oneOffTasks, habits, dateStr
-    );
-
-    totalTasks += total;
-    totalCompleted += completed;
-
-    if (total > 0) {
-      totalPercentage += percentage;
-      daysWithTasks++;
-    }
-  }
-
-  const avgCompletion = daysWithTasks > 0 ? Math.round(totalPercentage / daysWithTasks) : 0;
-
-  return {
-    avgCompletion,
-    totalCompleted,
-    totalTasks,
-  };
-}
-
-// Get task count for a date range
-export function getTaskCountForRange(projects: Project[], startDate: string, endDate: string): { total: number; completed: number } {
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
-
-  let total = 0;
-  let completed = 0;
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = formatDateToLocal(d);
-    const tasksForDate = getTasksForDate(projects, dateStr);
-
-    total += tasksForDate.length;
-    completed += tasksForDate.filter(({ task }) =>
-      task.completedDates.includes(dateStr)
-    ).length;
-  }
-
-  return { total, completed };
-}
-
 // Get completion for a specific date including ALL task types
 export function getAllTasksCompletionForDate(
   projects: Project[],
@@ -305,5 +114,53 @@ export function compareWeeksComprehensive(
   return {
     difference: Math.abs(difference),
     direction: difference > 0 ? 'up' : difference < 0 ? 'down' : 'same',
+  };
+}
+
+// Get comprehensive monthly stats including ALL task types
+export function getComprehensiveMonthlyStats(
+  projects: Project[],
+  recurringTasks: RecurringTask[],
+  oneOffTasks: OneOffTask[],
+  habits: Habit[],
+  currentDate: string
+) {
+  const date = new Date(currentDate + 'T00:00:00');
+  const year = date.getFullYear();
+  const month = date.getMonth();
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0);
+  const today = new Date(currentDate + 'T00:00:00');
+
+  // Only calculate up to today (not future dates)
+  const calcEndDate = endOfMonth > today ? today : endOfMonth;
+
+  let totalCompleted = 0;
+  let totalTasks = 0;
+  let totalPercentage = 0;
+  let daysWithTasks = 0;
+
+  for (let d = new Date(startOfMonth); d <= calcEndDate; d.setDate(d.getDate() + 1)) {
+    const dateStr = formatDateToLocal(d);
+    const { total, completed, percentage } = getAllTasksCompletionForDate(
+      projects, recurringTasks, oneOffTasks, habits, dateStr
+    );
+
+    totalTasks += total;
+    totalCompleted += completed;
+
+    if (total > 0) {
+      totalPercentage += percentage;
+      daysWithTasks++;
+    }
+  }
+
+  const avgCompletion = daysWithTasks > 0 ? Math.round(totalPercentage / daysWithTasks) : 0;
+
+  return {
+    avgCompletion,
+    totalCompleted,
+    totalTasks,
   };
 }

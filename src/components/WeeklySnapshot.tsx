@@ -1,12 +1,12 @@
 import { useApp } from '../context/AppContext';
-import { getWeeklyStats, compareWeeks } from '../utils/stats';
+import { getComprehensiveWeeklyStats, compareWeeksComprehensive } from '../utils/stats';
 
 export function WeeklySnapshot() {
   const { state } = useApp();
-  const { projects, selectedDate } = state;
+  const { projects, recurringTasks, oneOffTasks, habits, selectedDate } = state;
 
-  const weeklyStats = getWeeklyStats(projects, selectedDate);
-  const comparison = compareWeeks(projects, selectedDate);
+  const weeklyStats = getComprehensiveWeeklyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
+  const comparison = compareWeeksComprehensive(projects, recurringTasks, oneOffTasks, habits, selectedDate);
 
   return (
     <div className="p-4 flex-1 overflow-auto">

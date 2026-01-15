@@ -1,10 +1,10 @@
 import { useApp } from '../context/AppContext';
-import { getTasksForDate, getTodayISO, formatDateToLocal } from '../utils/storage';
-import { getCompletionForDate } from '../utils/stats';
+import { getTodayISO, formatDateToLocal } from '../utils/storage';
+import { getAllTasksCompletionForDate } from '../utils/stats';
 
 export function WeekStrip() {
   const { state, setSelectedDate } = useApp();
-  const { selectedDate, projects } = state;
+  const { selectedDate, projects, recurringTasks, oneOffTasks, habits } = state;
   const today = getTodayISO();
 
   // Get the week containing the selected date (Monday to Sunday)
@@ -27,9 +27,8 @@ export function WeekStrip() {
         const isSelected = dateStr === selectedDate;
         const isFuture = dateStr > today;
 
-        const tasksForDay = getTasksForDate(projects, dateStr);
-        const completion = getCompletionForDate(projects, dateStr);
-        const hasTasks = tasksForDay.length > 0;
+        const { total, percentage } = getAllTasksCompletionForDate(projects, recurringTasks, oneOffTasks, habits, dateStr);
+        const hasTasks = total > 0;
         const dayNum = new Date(dateStr + 'T00:00:00').getDate();
 
         return (
@@ -72,11 +71,11 @@ export function WeekStrip() {
                 ? 'text-dark-primary/80'
                 : !hasTasks || isFuture
                 ? 'text-dark-text-muted'
-                : completion === 100
+                : percentage === 100
                 ? 'text-accent-green'
                 : 'text-dark-text-secondary'
             }`}>
-              {isFuture || !hasTasks ? '—' : `${completion}%`}
+              {isFuture || !hasTasks ? '—' : `${percentage}%`}
             </span>
 
             {/* Today indicator dot */}

@@ -4,6 +4,7 @@ import {
   getComprehensiveMonthlyStats,
   compareWeeksComprehensive,
   getAllTasksCompletionForDate,
+  getWeekBounds,
 } from '../utils/stats';
 import { countAllTasks, countCompletedTasks, formatDateToLocal } from '../utils/storage';
 
@@ -14,6 +15,15 @@ export function StatsView() {
   const weeklyStats = getComprehensiveWeeklyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
   const monthlyStats = getComprehensiveMonthlyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
   const weekComparison = compareWeeksComprehensive(projects, recurringTasks, oneOffTasks, habits, selectedDate);
+
+  // Calculate tasks completed this week
+  const weekBounds = getWeekBounds(selectedDate);
+  let weeklyTasksCompleted = 0;
+  for (let d = new Date(weekBounds.start + 'T00:00:00'); d <= new Date(weekBounds.end + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+    const dateStr = formatDateToLocal(d);
+    const { completed } = getAllTasksCompletionForDate(projects, recurringTasks, oneOffTasks, habits, dateStr);
+    weeklyTasksCompleted += completed;
+  }
 
   // Calculate habit stats
   const habitStats = habits.map(habit => {
@@ -236,7 +246,7 @@ export function StatsView() {
             <div className="text-[11px] text-dark-text-muted">Avg Completion</div>
           </div>
           <div className="text-center p-3 bg-dark-tertiary rounded-lg">
-            <div className="text-2xl font-bold text-accent-green">{projects.reduce((sum, p) => sum + countCompletedTasks(p.tasks), 0)}</div>
+            <div className="text-2xl font-bold text-accent-green">{weeklyTasksCompleted}</div>
             <div className="text-[11px] text-dark-text-muted">Tasks Done</div>
           </div>
           <div className="text-center p-3 bg-dark-tertiary rounded-lg">

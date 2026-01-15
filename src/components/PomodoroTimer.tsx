@@ -12,85 +12,63 @@ export function PomodoroTimer() {
   const [autoLoop, setAutoLoop] = useState(true);
   const [youtubeAlarmUrl, setYoutubeAlarmUrl] = useState('');
   const intervalRef = useRef<number | null>(null);
-  // Use ref to always have current value in timer callback
-  const youtubeAlarmUrlRef = useRef(youtubeAlarmUrl);
+  const hasTriggeredAlarm = useRef(false);
 
-  // Keep ref in sync with state
-  useEffect(() => {
-    youtubeAlarmUrlRef.current = youtubeAlarmUrl;
-  }, [youtubeAlarmUrl]);
-
+  // Timer countdown effect
   useEffect(() => {
     if (isRunning && seconds > 0) {
+      hasTriggeredAlarm.current = false; // Reset alarm trigger flag
       intervalRef.current = window.setInterval(() => {
-        setSeconds((prev) => {
-          if (prev <= 1) {
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setSeconds((prev) => Math.max(0, prev - 1));
       }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [isRunning, seconds]);
+  }, [isRunning]);
 
-  const handleTimerComplete = () => {
-    // Check if YouTube alarm URL is set (use ref for current value in callback)
-    const alarmUrl = youtubeAlarmUrlRef.current;
-    if (alarmUrl && alarmUrl.trim()) {
-      try {
-        window.open(alarmUrl, '_blank');
-      } catch (e) {
-        // Fallback to default sound if popup blocked
-        playDefaultAlarm();
-      }
-    } else {
-      playDefaultAlarm();
-    }
-  };
+  // Handle timer completion - separate effect to avoid issues
+  useEffect(() => {
+    if (seconds === 0 && isRunning && !hasTriggeredAlarm.current) {
+      hasTriggeredAlarm.current = true;
 
-  const playDefaultAlarm = () => {
-    try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBRV71fDTgjMGHm7A7+OZUQ4PVqzn77BdGQg+ltryxnIjBBqAzPLaizsIFG+67OihUBAMUqnk8LSfGwk3kcXzz4AuBSJ7xfDckz4JGGi76+qaUxEPV6zj8LNiGgk7m9byw3EiBxyByvLaiz4IFnO/8+KcTwwNVKfi8Lhhpg==');
-      audio.play();
-    } catch (e) {
-      // Silent fail
-    }
-
-    if (autoLoop) {
-      // Auto-loop: immediately start next timer
-      if (mode === 'work') {
-        setMode('break');
-        setSeconds(breakDuration * 60);
-        // Keep running
+      // Open YouTube URL or play default alarm
+      if (youtubeAlarmUrl.trim()) {
+        window.open(youtubeAlarmUrl, '_blank');
       } else {
-        setMode('work');
-        setSeconds(workDuration * 60);
-        // Keep running
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBRV71fDTgjMGHm7A7+OZUQ4PVqzn77BdGQg+ltryxnIjBBqAzPLaizsIFG+67OihUBAMUqnk8LSfGwk3kcXzz4AuBSJ7xfDckz4JGGi76+qaUxEPV6zj8LNiGgk7m9byw3EiBxyByvLaiz4IFnO/8+KcTwwNVKfi8Lhhpg==');
+          audio.play();
+        } catch (e) {
+          // Silent fail
+        }
       }
-    } else {
-      // Manual mode: stop and switch
-      setIsRunning(false);
-      if (mode === 'work') {
-        setMode('break');
-        setSeconds(breakDuration * 60);
+
+      // Handle mode switch
+      if (autoLoop) {
+        if (mode === 'work') {
+          setMode('break');
+          setSeconds(breakDuration * 60);
+        } else {
+          setMode('work');
+          setSeconds(workDuration * 60);
+        }
       } else {
-        setMode('work');
-        setSeconds(workDuration * 60);
+        setIsRunning(false);
+        if (mode === 'work') {
+          setMode('break');
+          setSeconds(breakDuration * 60);
+        } else {
+          setMode('work');
+          setSeconds(workDuration * 60);
+        }
       }
     }
-  };
+  }, [seconds, isRunning, youtubeAlarmUrl, autoLoop, mode, workDuration, breakDuration]);
 
   const handleToggle = () => {
     setIsRunning(!isRunning);
@@ -98,13 +76,14 @@ export function PomodoroTimer() {
 
   const handleReset = () => {
     setIsRunning(false);
+    hasTriggeredAlarm.current = false;
     setSeconds(mode === 'work' ? workDuration * 60 : breakDuration * 60);
   };
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Save and reset timer
       setIsRunning(false);
+      hasTriggeredAlarm.current = false;
       setSeconds(mode === 'work' ? workDuration * 60 : breakDuration * 60);
     }
     setIsEditing(!isEditing);

@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
-import { getTasksForDate, getRecurringTasksForDate, getTodayISO, getDaysInMonth, getStartDayOfMonth, formatDateToLocal } from '../utils/storage';
-import { getCompletionForDate } from '../utils/stats';
+import { getTodayISO, getDaysInMonth, getStartDayOfMonth, formatDateToLocal, getTasksForDate, getRecurringTasksForDate } from '../utils/storage';
+import { getAllTasksCompletionForDate } from '../utils/stats';
 
 export function MonthView() {
   const { state, setSelectedDate } = useApp();
@@ -82,13 +82,14 @@ export function MonthView() {
           const isFuture = dateStr > today;
           const dayNum = new Date(dateStr + 'T00:00:00').getDate();
 
+          // Get comprehensive completion for all task types
+          const { total, percentage } = getAllTasksCompletionForDate(projects, recurringTasks, oneOffTasks, habits, dateStr);
+          const hasAnyTasks = total > 0;
+
+          // Get individual task counts for indicators
           const tasksForDay = getTasksForDate(projects, dateStr);
           const recurringForDay = getRecurringTasksForDate(recurringTasks, dateStr);
           const oneOffForDay = oneOffTasks.filter(t => t.dueDate === dateStr);
-          const totalTasks = tasksForDay.length + recurringForDay.length + oneOffForDay.length + habits.length;
-
-          const completion = getCompletionForDate(projects, dateStr);
-          const hasAnyTasks = totalTasks > 0;
 
           return (
             <button
@@ -110,9 +111,9 @@ export function MonthView() {
 
               {hasAnyTasks && !isFuture && (
                 <div className={`text-[10px] font-mono ${
-                  isSelected ? 'text-dark-primary/80' : completion === 100 ? 'text-accent-green' : 'text-dark-text-muted'
+                  isSelected ? 'text-dark-primary/80' : percentage === 100 ? 'text-accent-green' : 'text-dark-text-muted'
                 }`}>
-                  {completion}%
+                  {percentage}%
                 </div>
               )}
 
