@@ -661,7 +661,7 @@ function TaskItem({
           {allSubtasks.map(subtask => (
             <div
               key={subtask.id}
-              className="flex items-center gap-2.5 px-3 py-2 bg-dark-tertiary rounded-lg group/subtask"
+              className="flex items-center gap-2.5 px-3 py-2 bg-dark-secondary rounded-lg group/subtask"
             >
               <input
                 type="checkbox"

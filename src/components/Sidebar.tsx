@@ -6,7 +6,7 @@ import { PomodoroTimer } from './PomodoroTimer';
 import { TimezoneTool } from './TimezoneTool';
 import { ThemeToggle } from './ThemeToggle';
 import { GroceryList } from './GroceryList';
-import { getWeeklyStats, compareWeeks } from '../utils/stats';
+import { getComprehensiveWeeklyStats, compareWeeksComprehensive } from '../utils/stats';
 import { resetToSampleData, clearAllData, generateId } from '../utils/storage';
 
 // Quick Link interface
@@ -43,7 +43,7 @@ export function Sidebar({
   weather,
 }: SidebarProps) {
   const { state, dispatch, addReadingItem, deleteReadingItem, updateReadingStatus } = useApp();
-  const { projects, selectedDate, readingList = [] } = state;
+  const { projects, selectedDate, readingList = [], recurringTasks, oneOffTasks, habits } = state;
 
   // Quick Links state
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
@@ -174,8 +174,8 @@ export function Sidebar({
     completed: readingList.filter(b => b.status === 'completed'),
   };
 
-  const weeklyStats = getWeeklyStats(projects, selectedDate);
-  const comparison = compareWeeks(projects, selectedDate);
+  const weeklyStats = getComprehensiveWeeklyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
+  const comparison = compareWeeksComprehensive(projects, recurringTasks, oneOffTasks, habits, selectedDate);
 
   const handleResetToSampleData = () => {
     if (confirm('Reset all data to sample data? This cannot be undone.')) {

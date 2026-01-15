@@ -1,18 +1,19 @@
 import { useApp } from '../context/AppContext';
 import {
-  getWeeklyStats,
+  getComprehensiveWeeklyStats,
   getMonthlyStats,
-  compareWeeks,
+  compareWeeksComprehensive,
+  getAllTasksCompletionForDate,
 } from '../utils/stats';
-import { countAllTasks, countCompletedTasks, formatDateToLocal, getTasksForDate, getCarryoverTasks, getRecurringTasksForDate } from '../utils/storage';
+import { countAllTasks, countCompletedTasks, formatDateToLocal } from '../utils/storage';
 
 export function StatsView() {
   const { state } = useApp();
   const { projects, habits, recurringTasks, oneOffTasks, selectedDate } = state;
 
-  const weeklyStats = getWeeklyStats(projects, selectedDate);
+  const weeklyStats = getComprehensiveWeeklyStats(projects, recurringTasks, oneOffTasks, habits, selectedDate);
   const monthlyStats = getMonthlyStats(projects, selectedDate);
-  const weekComparison = compareWeeks(projects, selectedDate);
+  const weekComparison = compareWeeksComprehensive(projects, recurringTasks, oneOffTasks, habits, selectedDate);
 
   // Calculate habit stats
   const habitStats = habits.map(habit => {
@@ -32,30 +33,13 @@ export function StatsView() {
     d.setDate(d.getDate() - i);
     const dateStr = formatDateToLocal(d);
 
-    // Get all tasks for this date (same logic as MainContent)
-    const scheduledTasks = getTasksForDate(projects, dateStr);
-    const carryoverTasks = getCarryoverTasks(projects, dateStr);
-    const recurringTasksForDate = getRecurringTasksForDate(recurringTasks, dateStr);
-    const todayOneOff = oneOffTasks.filter(t => t.dueDate === dateStr);
-    const habitsForDate = habits;
-
-    // Calculate total and completed
-    const totalCount = scheduledTasks.length + carryoverTasks.length + recurringTasksForDate.length + todayOneOff.length + habitsForDate.length;
-
-    const completedCount = [
-      ...scheduledTasks.filter(({ task }) => task.completedDates.includes(dateStr)),
-      ...carryoverTasks.filter(({ task }) => task.completedDates.includes(dateStr)),
-      ...recurringTasksForDate.filter(t => t.completedDates.includes(dateStr)),
-      ...todayOneOff.filter(t => t.completed || t.completedDate === dateStr),
-      ...habitsForDate.filter(h => h.completedDates.includes(dateStr)),
-    ].length;
-
-    const completion = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    // Use the comprehensive function for all task types
+    const { percentage } = getAllTasksCompletionForDate(projects, recurringTasks, oneOffTasks, habits, dateStr);
 
     last7Days.push({
       date: dateStr,
       dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      completion,
+      completion: percentage,
     });
   }
 
@@ -248,7 +232,7 @@ export function StatsView() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-3 bg-dark-tertiary rounded-lg">
-            <div className="text-2xl font-bold text-dark-text-primary">{monthlyStats.avgCompletion}%</div>
+            <div className="text-2xl font-bold text-dark-text-primary">{weeklyStats.avgCompletion}%</div>
             <div className="text-[11px] text-dark-text-muted">Avg Completion</div>
           </div>
           <div className="text-center p-3 bg-dark-tertiary rounded-lg">
