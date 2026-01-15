@@ -675,7 +675,7 @@ function TaskItem({
                 }}
                 className="w-4 h-4"
               />
-              <span className={`flex-1 text-[13px] ${subtask.completed ? 'text-dark-text-muted line-through' : 'text-dark-text-secondary'}`}>
+              <span className={`flex-1 text-[13px] ${subtask.completed ? 'text-dark-text-muted line-through' : 'text-dark-text-primary'}`}>
                 {subtask.title}
               </span>
               {onDeleteSubtask && (

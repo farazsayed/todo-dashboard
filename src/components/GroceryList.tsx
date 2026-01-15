@@ -15,32 +15,26 @@ interface GroceryListProps {
 }
 
 export function GroceryList({ isOpen, onClose }: GroceryListProps) {
-  const [items, setItems] = useState<GroceryItem[]>([]);
+  // Initialize state directly from localStorage to avoid race conditions
+  const [items, setItems] = useState<GroceryItem[]>(() => {
+    const saved = localStorage.getItem(GROCERY_LIST_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [newItemText, setNewItemText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
-  const isInitialLoadComplete = useRef(false);
 
-  // Load items from localStorage on mount
+  // Save items to localStorage whenever they change
   useEffect(() => {
-    const saved = localStorage.getItem(GROCERY_LIST_KEY);
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch {
-        setItems([]);
-      }
-    }
-    // Mark initial load as complete after loading
-    isInitialLoadComplete.current = true;
-  }, []);
-
-  // Save items to localStorage whenever they change (but only after initial load)
-  useEffect(() => {
-    // Don't save until initial load is complete to avoid overwriting existing data
-    if (!isInitialLoadComplete.current) return;
     localStorage.setItem(GROCERY_LIST_KEY, JSON.stringify(items));
   }, [items]);
 
