@@ -3,6 +3,7 @@ import type { AppState, Project, RecurringTask, OneOffTask, Habit, Task, TaskLin
 const STORAGE_KEY = 'todo-dashboard-data';
 const CLOUD_CONFIG_KEY = 'todo-dashboard-cloud-config';
 const LAST_BACKUP_KEY = 'todo-dashboard-last-backup';
+const LAST_CLOUD_TIMESTAMP_KEY = 'todo-dashboard-last-cloud-timestamp';
 const GROCERY_LIST_KEY = 'groceryList';
 const QUICK_LINKS_KEY = 'quickLinks';
 const COLLAPSED_SECTIONS_KEY = 'sidebarCollapsedSections';
@@ -32,6 +33,62 @@ export function saveCloudConfig(config: CloudConfig): void {
 // Clear cloud config
 export function clearCloudConfig(): void {
   localStorage.removeItem(CLOUD_CONFIG_KEY);
+  localStorage.removeItem(LAST_CLOUD_TIMESTAMP_KEY);
+}
+
+// Get the last known cloud timestamp (when we last synced)
+export function getLastCloudTimestamp(): string | null {
+  return localStorage.getItem(LAST_CLOUD_TIMESTAMP_KEY);
+}
+
+// Save the cloud timestamp after a successful sync
+export function saveLastCloudTimestamp(timestamp: string): void {
+  localStorage.setItem(LAST_CLOUD_TIMESTAMP_KEY, timestamp);
+}
+
+// Check if cloud has newer data than our last sync
+export async function checkCloudForConflicts(): Promise<{ hasConflict: boolean; cloudTimestamp?: string; message: string }> {
+  const config = getCloudConfig();
+  if (!config?.apiKey || !config.binId) {
+    return { hasConflict: false, message: 'No cloud sync configured' };
+  }
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${config.binId}/latest`, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': config.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      return { hasConflict: false, message: 'Could not check cloud' };
+    }
+
+    const result = await response.json();
+    const cloudData = result.record;
+    const cloudTimestamp = cloudData.lastSynced;
+
+    if (!cloudTimestamp) {
+      return { hasConflict: false, message: 'No timestamp in cloud data' };
+    }
+
+    const lastKnownTimestamp = getLastCloudTimestamp();
+
+    // If we've never synced, or cloud is newer than our last known sync
+    if (lastKnownTimestamp && cloudTimestamp > lastKnownTimestamp) {
+      return {
+        hasConflict: true,
+        cloudTimestamp,
+        message: 'Cloud has newer data from another device'
+      };
+    }
+
+    return { hasConflict: false, cloudTimestamp, message: 'No conflict' };
+  } catch (error) {
+    console.error('Conflict check failed:', error);
+    return { hasConflict: false, message: 'Conflict check failed' };
+  }
 }
 
 // Push data to JSONBin.io
@@ -54,9 +111,10 @@ export async function pushToCloud(): Promise<{ success: boolean; message: string
     const quickLinks = localStorage.getItem(QUICK_LINKS_KEY);
     const collapsedSections = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
 
+    const syncTimestamp = new Date().toISOString();
     const payload = {
       version: 2,
-      lastSynced: new Date().toISOString(),
+      lastSynced: syncTimestamp,
       data: appState,
       groceryList: groceryList ? JSON.parse(groceryList) : [],
       quickLinks: quickLinks ? JSON.parse(quickLinks) : [],
@@ -79,7 +137,8 @@ export async function pushToCloud(): Promise<{ success: boolean; message: string
         throw new Error(error.message || 'Failed to update bin');
       }
 
-      localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+      localStorage.setItem(LAST_BACKUP_KEY, syncTimestamp);
+      saveLastCloudTimestamp(syncTimestamp);
       return { success: true, message: 'Data synced to cloud' };
     } else {
       // Create new bin
@@ -103,7 +162,8 @@ export async function pushToCloud(): Promise<{ success: boolean; message: string
 
       // Save the bin ID for future syncs
       saveCloudConfig({ ...config, binId });
-      localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+      localStorage.setItem(LAST_BACKUP_KEY, syncTimestamp);
+      saveLastCloudTimestamp(syncTimestamp);
 
       return { success: true, message: 'Data synced to cloud (new backup created)' };
     }
@@ -171,6 +231,11 @@ export async function pullFromCloud(): Promise<{ success: boolean; message: stri
     // Restore collapsed sections if present
     if (cloudData.collapsedSections) {
       localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(cloudData.collapsedSections));
+    }
+
+    // Save the cloud timestamp so we know we're in sync
+    if (cloudData.lastSynced) {
+      saveLastCloudTimestamp(cloudData.lastSynced);
     }
 
     return { success: true, message: 'Data restored from cloud', data: state };

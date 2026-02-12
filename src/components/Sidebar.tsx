@@ -18,6 +18,7 @@ import {
   pullFromCloud,
   getLastBackupTime,
   isAutoBackupDue,
+  checkCloudForConflicts,
   type CloudConfig,
 } from '../utils/storage';
 
@@ -81,6 +82,7 @@ export function Sidebar({
   const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(() => getLastBackupTime());
+  const [hasConflict, setHasConflict] = useState(false);
 
   // Collapsible section state - persist to localStorage
   const COLLAPSED_SECTIONS_KEY = 'sidebarCollapsedSections';
@@ -123,15 +125,25 @@ export function Sidebar({
     }
   }, []);
 
-  // Auto-backup to cloud every 12 hours
+  // Auto-backup to cloud every 12 hours (with conflict detection)
   useEffect(() => {
     const checkAndBackup = async () => {
       const config = getCloudConfig();
-      if (config?.apiKey && isAutoBackupDue()) {
+      if (config?.apiKey && config.binId && isAutoBackupDue()) {
+        // First check for conflicts
+        const conflictCheck = await checkCloudForConflicts();
+        if (conflictCheck.hasConflict) {
+          console.log('Auto-backup: Skipped - cloud has newer data');
+          setHasConflict(true);
+          setCloudSyncStatus('Cloud has newer data - pull to sync');
+          return;
+        }
+
         console.log('Auto-backup: Starting scheduled backup...');
         const result = await pushToCloud();
         if (result.success) {
           setLastBackup(getLastBackupTime());
+          setHasConflict(false);
           console.log('Auto-backup: Success');
         } else {
           console.log('Auto-backup: Failed -', result.message);
@@ -267,11 +279,31 @@ export function Sidebar({
 
   const handlePushToCloud = async () => {
     setIsSyncing(true);
+    setCloudSyncStatus('Checking for conflicts...');
+
+    // Check for conflicts first
+    const conflictCheck = await checkCloudForConflicts();
+    if (conflictCheck.hasConflict) {
+      setHasConflict(true);
+      const overwrite = confirm(
+        'Cloud has newer data from another device.\n\n' +
+        'Push anyway? This will overwrite the cloud data.\n\n' +
+        'Click Cancel to pull the newer data instead.'
+      );
+      if (!overwrite) {
+        setIsSyncing(false);
+        setCloudSyncStatus('Push cancelled - pull to get newer data');
+        setTimeout(() => setCloudSyncStatus(null), 3000);
+        return;
+      }
+    }
+
     setCloudSyncStatus('Syncing to cloud...');
     const result = await pushToCloud();
     setCloudSyncStatus(result.message);
     if (result.success) {
       setLastBackup(getLastBackupTime());
+      setHasConflict(false);
       // Refresh config in case bin ID was created
       setCloudConfig(getCloudConfig());
     }
@@ -289,6 +321,9 @@ export function Sidebar({
     setCloudSyncStatus(result.message);
     if (result.success && result.data) {
       dispatch({ type: 'SET_STATE', payload: result.data });
+      setHasConflict(false);
+      // Force a page reload to refresh all components with new data
+      window.location.reload();
     }
     setIsSyncing(false);
     setTimeout(() => setCloudSyncStatus(null), 3000);
@@ -956,12 +991,23 @@ export function Sidebar({
             {cloudConfig?.apiKey ? (
               <>
                 {/* Connected state */}
-                <div className="flex items-center gap-2 text-[11px] text-accent-green">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                  <span>Connected to JSONBin</span>
+                <div className={`flex items-center gap-2 text-[11px] ${hasConflict ? 'text-orange-400' : 'text-accent-green'}`}>
+                  {hasConflict ? (
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  )}
+                  <span>{hasConflict ? 'Cloud has newer data' : 'Connected to JSONBin'}</span>
                 </div>
+                {hasConflict && (
+                  <div className="text-[10px] text-orange-400 bg-orange-400/10 rounded px-2 py-1">
+                    Another device synced more recently. Pull to get latest data, or Push to overwrite.
+                  </div>
+                )}
                 <div className="text-[10px] text-dark-text-muted">
                   Last backup: {formatLastBackup(lastBackup)}
                 </div>
