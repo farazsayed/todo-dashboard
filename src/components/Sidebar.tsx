@@ -7,7 +7,19 @@ import { TimezoneTool } from './TimezoneTool';
 import { ThemeToggle } from './ThemeToggle';
 import { GroceryList } from './GroceryList';
 import { getComprehensiveWeeklyStats, compareWeeksComprehensive } from '../utils/stats';
-import { resetToSampleData, clearAllData, generateId } from '../utils/storage';
+import {
+  resetToSampleData,
+  clearAllData,
+  generateId,
+  getCloudConfig,
+  saveCloudConfig,
+  clearCloudConfig,
+  pushToCloud,
+  pullFromCloud,
+  getLastBackupTime,
+  isAutoBackupDue,
+  type CloudConfig,
+} from '../utils/storage';
 
 // Quick Link interface
 interface QuickLink {
@@ -61,6 +73,15 @@ export function Sidebar({
   const [newBookAuthor, setNewBookAuthor] = useState('');
   const [newBookLink, setNewBookLink] = useState('');
 
+  // Cloud sync state
+  const [cloudConfig, setCloudConfig] = useState<CloudConfig | null>(() => getCloudConfig());
+  const [isConfiguringCloud, setIsConfiguringCloud] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [binIdInput, setBinIdInput] = useState('');
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastBackup, setLastBackup] = useState<string | null>(() => getLastBackupTime());
+
   // Collapsible section state - persist to localStorage
   const COLLAPSED_SECTIONS_KEY = 'sidebarCollapsedSections';
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
@@ -100,6 +121,31 @@ export function Sidebar({
         setQuickLinks([]);
       }
     }
+  }, []);
+
+  // Auto-backup to cloud every 12 hours
+  useEffect(() => {
+    const checkAndBackup = async () => {
+      const config = getCloudConfig();
+      if (config?.apiKey && isAutoBackupDue()) {
+        console.log('Auto-backup: Starting scheduled backup...');
+        const result = await pushToCloud();
+        if (result.success) {
+          setLastBackup(getLastBackupTime());
+          console.log('Auto-backup: Success');
+        } else {
+          console.log('Auto-backup: Failed -', result.message);
+        }
+      }
+    };
+
+    // Check on mount
+    checkAndBackup();
+
+    // Check every hour (will only backup if 12 hours have passed)
+    const interval = setInterval(checkAndBackup, 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Save quick links to localStorage
@@ -189,6 +235,78 @@ export function Sidebar({
       const emptyState = clearAllData();
       dispatch({ type: 'SET_STATE', payload: emptyState });
     }
+  };
+
+  // Cloud sync handlers
+  const handleSaveCloudConfig = () => {
+    if (!apiKeyInput.trim()) {
+      setCloudSyncStatus('Please enter an API key');
+      return;
+    }
+    const newConfig: CloudConfig = {
+      apiKey: apiKeyInput.trim(),
+      binId: binIdInput.trim() || null,
+    };
+    saveCloudConfig(newConfig);
+    setCloudConfig(newConfig);
+    setIsConfiguringCloud(false);
+    setApiKeyInput('');
+    setBinIdInput('');
+    setCloudSyncStatus('Cloud sync configured!');
+    setTimeout(() => setCloudSyncStatus(null), 3000);
+  };
+
+  const handleDisconnectCloud = () => {
+    if (confirm('Disconnect cloud sync? Your cloud backup will remain but this device will no longer sync.')) {
+      clearCloudConfig();
+      setCloudConfig(null);
+      setCloudSyncStatus('Cloud sync disconnected');
+      setTimeout(() => setCloudSyncStatus(null), 3000);
+    }
+  };
+
+  const handlePushToCloud = async () => {
+    setIsSyncing(true);
+    setCloudSyncStatus('Syncing to cloud...');
+    const result = await pushToCloud();
+    setCloudSyncStatus(result.message);
+    if (result.success) {
+      setLastBackup(getLastBackupTime());
+      // Refresh config in case bin ID was created
+      setCloudConfig(getCloudConfig());
+    }
+    setIsSyncing(false);
+    setTimeout(() => setCloudSyncStatus(null), 3000);
+  };
+
+  const handlePullFromCloud = async () => {
+    if (!confirm('Replace local data with cloud backup? This will overwrite your current data.')) {
+      return;
+    }
+    setIsSyncing(true);
+    setCloudSyncStatus('Restoring from cloud...');
+    const result = await pullFromCloud();
+    setCloudSyncStatus(result.message);
+    if (result.success && result.data) {
+      dispatch({ type: 'SET_STATE', payload: result.data });
+    }
+    setIsSyncing(false);
+    setTimeout(() => setCloudSyncStatus(null), 3000);
+  };
+
+  const formatLastBackup = (isoString: string | null): string => {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
 
   // Collapsed view
@@ -826,6 +944,125 @@ export function Sidebar({
             <div className="text-[10px] text-dark-text-muted mt-3 mb-2">
               Keyboard shortcuts: N (new task), G (projects), T/W/M/S (views), D (theme)
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 9. Cloud Sync */}
+      <div className="p-4 border-b border-dark-border">
+        <SectionHeader id="cloudsync" title="Cloud Sync" />
+        {!isSectionCollapsed('cloudsync') && (
+          <div className="mt-3 space-y-2">
+            {cloudConfig?.apiKey ? (
+              <>
+                {/* Connected state */}
+                <div className="flex items-center gap-2 text-[11px] text-accent-green">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  <span>Connected to JSONBin</span>
+                </div>
+                <div className="text-[10px] text-dark-text-muted">
+                  Last backup: {formatLastBackup(lastBackup)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handlePushToCloud}
+                    disabled={isSyncing}
+                    className="flex-1 px-3 py-2 text-[12px] bg-dark-tertiary text-dark-text-secondary rounded-lg hover:bg-accent-blue/20 hover:text-accent-blue border border-dark-border hover:border-accent-blue/30 btn-scale flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Push
+                  </button>
+                  <button
+                    onClick={handlePullFromCloud}
+                    disabled={isSyncing}
+                    className="flex-1 px-3 py-2 text-[12px] bg-dark-tertiary text-dark-text-secondary rounded-lg hover:bg-accent-green/20 hover:text-accent-green border border-dark-border hover:border-accent-green/30 btn-scale flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    Pull
+                  </button>
+                </div>
+                <button
+                  onClick={handleDisconnectCloud}
+                  className="w-full px-3 py-1.5 text-[11px] text-dark-text-muted hover:text-red-400"
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : isConfiguringCloud ? (
+              <>
+                {/* Configuration form */}
+                <div className="text-[11px] text-dark-text-secondary mb-2">
+                  Get your free API key from{' '}
+                  <a
+                    href="https://jsonbin.io"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-blue hover:underline"
+                  >
+                    jsonbin.io
+                  </a>
+                </div>
+                <input
+                  type="text"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="Paste your API key..."
+                  className="w-full px-2.5 py-2 text-[12px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:border-accent-blue"
+                />
+                <input
+                  type="text"
+                  value={binIdInput}
+                  onChange={(e) => setBinIdInput(e.target.value)}
+                  placeholder="Bin ID (optional, for existing backup)"
+                  className="w-full px-2.5 py-2 text-[12px] bg-dark-tertiary border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:border-accent-blue"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveCloudConfig}
+                    className="flex-1 px-3 py-1.5 text-[12px] bg-accent-green text-dark-primary rounded-lg hover:bg-accent-green/90 font-medium"
+                  >
+                    Connect
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsConfiguringCloud(false);
+                      setApiKeyInput('');
+                      setBinIdInput('');
+                    }}
+                    className="px-3 py-1.5 text-[12px] bg-dark-tertiary text-dark-text-secondary rounded-lg hover:bg-dark-hover"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Not connected state */}
+                <div className="text-[11px] text-dark-text-muted mb-2">
+                  Sync your data across devices with free cloud backup.
+                </div>
+                <button
+                  onClick={() => setIsConfiguringCloud(true)}
+                  className="w-full px-3 py-2 text-[12px] bg-dark-tertiary text-dark-text-secondary rounded-lg hover:bg-accent-blue/20 hover:text-accent-blue border border-dark-border hover:border-accent-blue/30 btn-scale flex items-center justify-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Setup Cloud Sync
+                </button>
+              </>
+            )}
+            {cloudSyncStatus && (
+              <div className="text-[11px] text-center text-dark-text-secondary bg-dark-tertiary rounded px-2 py-1.5">
+                {cloudSyncStatus}
+              </div>
+            )}
           </div>
         )}
       </div>

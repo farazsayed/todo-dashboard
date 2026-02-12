@@ -1,6 +1,213 @@
 import type { AppState, Project, RecurringTask, OneOffTask, Habit, Task, TaskLink } from '../types';
 
 const STORAGE_KEY = 'todo-dashboard-data';
+const CLOUD_CONFIG_KEY = 'todo-dashboard-cloud-config';
+const LAST_BACKUP_KEY = 'todo-dashboard-last-backup';
+const GROCERY_LIST_KEY = 'groceryList';
+const QUICK_LINKS_KEY = 'quickLinks';
+const COLLAPSED_SECTIONS_KEY = 'sidebarCollapsedSections';
+
+// Cloud sync configuration
+export interface CloudConfig {
+  apiKey: string;
+  binId: string | null;
+}
+
+// Get cloud config from localStorage
+export function getCloudConfig(): CloudConfig | null {
+  try {
+    const stored = localStorage.getItem(CLOUD_CONFIG_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored);
+  } catch {
+    return null;
+  }
+}
+
+// Save cloud config to localStorage
+export function saveCloudConfig(config: CloudConfig): void {
+  localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(config));
+}
+
+// Clear cloud config
+export function clearCloudConfig(): void {
+  localStorage.removeItem(CLOUD_CONFIG_KEY);
+}
+
+// Push data to JSONBin.io
+export async function pushToCloud(): Promise<{ success: boolean; message: string }> {
+  const config = getCloudConfig();
+  if (!config?.apiKey) {
+    return { success: false, message: 'No API key configured' };
+  }
+
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) {
+    return { success: false, message: 'No data to sync' };
+  }
+
+  try {
+    const appState = JSON.parse(stored);
+
+    // Gather all data including separate localStorage items
+    const groceryList = localStorage.getItem(GROCERY_LIST_KEY);
+    const quickLinks = localStorage.getItem(QUICK_LINKS_KEY);
+    const collapsedSections = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
+
+    const payload = {
+      version: 2,
+      lastSynced: new Date().toISOString(),
+      data: appState,
+      groceryList: groceryList ? JSON.parse(groceryList) : [],
+      quickLinks: quickLinks ? JSON.parse(quickLinks) : [],
+      collapsedSections: collapsedSections ? JSON.parse(collapsedSections) : [],
+    };
+
+    if (config.binId) {
+      // Update existing bin
+      const response = await fetch(`https://api.jsonbin.io/v3/b/${config.binId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': config.apiKey,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update bin');
+      }
+
+      localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+      return { success: true, message: 'Data synced to cloud' };
+    } else {
+      // Create new bin
+      const response = await fetch('https://api.jsonbin.io/v3/b', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': config.apiKey,
+          'X-Bin-Name': 'todo-dashboard-backup',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create bin');
+      }
+
+      const result = await response.json();
+      const binId = result.metadata.id;
+
+      // Save the bin ID for future syncs
+      saveCloudConfig({ ...config, binId });
+      localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+
+      return { success: true, message: 'Data synced to cloud (new backup created)' };
+    }
+  } catch (error) {
+    console.error('Push to cloud failed:', error);
+    return { success: false, message: error instanceof Error ? error.message : 'Sync failed' };
+  }
+}
+
+// Pull data from JSONBin.io
+export async function pullFromCloud(): Promise<{ success: boolean; message: string; data?: AppState }> {
+  const config = getCloudConfig();
+  if (!config?.apiKey) {
+    return { success: false, message: 'No API key configured' };
+  }
+
+  if (!config.binId) {
+    return { success: false, message: 'No cloud backup found. Push data first to create a backup.' };
+  }
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${config.binId}/latest`, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': config.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch from cloud');
+    }
+
+    const result = await response.json();
+    const cloudData = result.record;
+
+    // Handle both wrapped format and raw format
+    const data = cloudData.data || cloudData;
+
+    // Validate the data
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format in cloud backup');
+    }
+
+    // Merge with default state
+    const state: AppState = {
+      ...getDefaultState(),
+      ...data,
+      selectedDate: getTodayISO(),
+    };
+
+    // Save main app state to localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+    // Restore grocery list if present
+    if (cloudData.groceryList) {
+      localStorage.setItem(GROCERY_LIST_KEY, JSON.stringify(cloudData.groceryList));
+    }
+
+    // Restore quick links if present
+    if (cloudData.quickLinks) {
+      localStorage.setItem(QUICK_LINKS_KEY, JSON.stringify(cloudData.quickLinks));
+    }
+
+    // Restore collapsed sections if present
+    if (cloudData.collapsedSections) {
+      localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(cloudData.collapsedSections));
+    }
+
+    return { success: true, message: 'Data restored from cloud', data: state };
+  } catch (error) {
+    console.error('Pull from cloud failed:', error);
+    return { success: false, message: error instanceof Error ? error.message : 'Sync failed' };
+  }
+}
+
+// Get last backup time
+export function getLastBackupTime(): string | null {
+  return localStorage.getItem(LAST_BACKUP_KEY);
+}
+
+// Check if auto-backup is due (12 hours)
+export function isAutoBackupDue(): boolean {
+  const lastBackup = getLastBackupTime();
+  if (!lastBackup) return true;
+
+  const lastBackupDate = new Date(lastBackup);
+  const now = new Date();
+  const hoursSinceBackup = (now.getTime() - lastBackupDate.getTime()) / (1000 * 60 * 60);
+
+  return hoursSinceBackup >= 12;
+}
+
+// Perform auto-backup if due and configured
+export async function performAutoBackupIfDue(): Promise<void> {
+  const config = getCloudConfig();
+  if (!config?.apiKey) return;
+
+  if (isAutoBackupDue()) {
+    console.log('Auto-backup: Starting...');
+    const result = await pushToCloud();
+    console.log('Auto-backup:', result.message);
+  }
+}
 
 // Format a Date object to local YYYY-MM-DD string
 // This avoids timezone issues with toISOString() which returns UTC
@@ -434,6 +641,91 @@ export function clearAllData(): AppState {
   const emptyState = getDefaultState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyState));
   return emptyState;
+}
+
+// Export data to a JSON file for backup
+export function exportData(): void {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      alert('No data to export');
+      return;
+    }
+
+    const data = JSON.parse(stored);
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: data,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `todo-dashboard-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    alert('Failed to export data. Please try again.');
+  }
+}
+
+// Import data from a JSON backup file
+export function importData(file: File): Promise<AppState> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+
+        // Handle both wrapped format (with version/exportedAt) and raw format
+        const data = parsed.data || parsed;
+
+        // Validate the data has expected structure
+        if (!data || typeof data !== 'object') {
+          throw new Error('Invalid backup file format');
+        }
+
+        // Check for required fields (at least one should exist)
+        const hasValidStructure =
+          Array.isArray(data.projects) ||
+          Array.isArray(data.recurringTasks) ||
+          Array.isArray(data.oneOffTasks) ||
+          Array.isArray(data.habits);
+
+        if (!hasValidStructure) {
+          throw new Error('Backup file does not contain valid todo data');
+        }
+
+        // Merge with default state to ensure all fields exist
+        const state: AppState = {
+          ...getDefaultState(),
+          ...data,
+          selectedDate: getTodayISO(), // Always use today's date
+        };
+
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+        resolve(state);
+      } catch (error) {
+        console.error('Failed to import data:', error);
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+
+    reader.readAsText(file);
+  });
 }
 
 // Generate a unique ID
