@@ -21,7 +21,7 @@ export function WeekStrip() {
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex items-center justify-center gap-2 py-5 px-4">
+    <div className="flex items-center justify-center gap-1 md:gap-2 py-3 md:py-5 px-2 md:px-4">
       {weekDays.map((dateStr, index) => {
         const isToday = dateStr === today;
         const isSelected = dateStr === selectedDate;
@@ -35,7 +35,7 @@ export function WeekStrip() {
           <button
             key={dateStr}
             onClick={() => setSelectedDate(dateStr)}
-            className={`relative flex flex-col items-center gap-1 px-4 py-3 rounded-xl min-w-[64px] transition-all ${
+            className={`relative flex flex-col items-center gap-0.5 md:gap-1 px-2 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl min-w-[40px] md:min-w-[64px] transition-all ${
               isSelected
                 ? 'bg-accent-blue shadow-lg shadow-accent-blue/30 scale-105'
                 : isToday
@@ -44,7 +44,7 @@ export function WeekStrip() {
             }`}
           >
             {/* Day label */}
-            <span className={`text-[11px] font-semibold uppercase ${
+            <span className={`text-[10px] md:text-[11px] font-semibold uppercase ${
               isSelected
                 ? 'text-dark-primary'
                 : isToday
@@ -55,7 +55,7 @@ export function WeekStrip() {
             </span>
 
             {/* Day number */}
-            <span className={`text-[18px] font-bold ${
+            <span className={`text-[14px] md:text-[18px] font-bold ${
               isSelected
                 ? 'text-dark-primary'
                 : isToday
@@ -65,8 +65,8 @@ export function WeekStrip() {
               {dayNum}
             </span>
 
-            {/* Completion percentage */}
-            <span className={`text-[11px] font-mono ${
+            {/* Completion percentage - hidden on mobile */}
+            <span className={`text-[10px] md:text-[11px] font-mono hidden md:block ${
               isSelected
                 ? 'text-dark-primary/80'
                 : !hasTasks || isFuture

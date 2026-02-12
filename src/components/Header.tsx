@@ -96,7 +96,12 @@ const ProgressTooltip = memo(function ProgressTooltip() {
   );
 });
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+  showMenuButton?: boolean;
+}
+
+export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const { state, setSelectedDate } = useApp();
   const { selectedDate } = state;
   const [showProgressTooltip, setShowProgressTooltip] = useState(false);
@@ -130,14 +135,26 @@ export function Header() {
   });
 
   return (
-    <div className="px-6 md:px-8 py-4">
+    <div className="px-4 md:px-6 lg:px-8 py-3 md:py-4">
       {/* Date navigation and info */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {/* Current time - separate component to prevent re-renders */}
-          <Clock />
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile menu button */}
+          {showMenuButton && (
+            <button
+              onClick={onMenuClick}
+              className="w-9 h-9 bg-dark-tertiary rounded-lg flex flex-col items-center justify-center gap-1 hover:bg-dark-hover mr-1"
+            >
+              <span className="w-4 h-0.5 bg-dark-text-secondary rounded-sm"></span>
+              <span className="w-4 h-0.5 bg-dark-text-secondary rounded-sm"></span>
+              <span className="w-4 h-0.5 bg-dark-text-secondary rounded-sm"></span>
+            </button>
+          )}
 
-          <div className="w-px h-6 bg-dark-border" />
+          {/* Current time - separate component to prevent re-renders */}
+          <span className="hidden md:inline"><Clock /></span>
+
+          <div className="w-px h-6 bg-dark-border hidden md:block" />
 
           <button
             onClick={() => navigateDate(-1)}
@@ -148,7 +165,7 @@ export function Header() {
             </svg>
           </button>
 
-          <span className="text-xl font-semibold text-dark-text-primary">
+          <span className="text-base md:text-xl font-semibold text-dark-text-primary">
             {formattedDate}
           </span>
 
@@ -161,7 +178,7 @@ export function Header() {
             </svg>
           </button>
 
-          <div className="relative">
+          <div className="relative hidden md:block">
             <input
               type="date"
               value={selectedDate}
@@ -174,9 +191,9 @@ export function Header() {
           </div>
         </div>
 
-        {/* Days left with hover tooltip */}
+        {/* Days left with hover tooltip - hidden on mobile */}
         <div
-          className="relative"
+          className="relative hidden md:block"
           onMouseEnter={() => setShowProgressTooltip(true)}
           onMouseLeave={() => setShowProgressTooltip(false)}
         >

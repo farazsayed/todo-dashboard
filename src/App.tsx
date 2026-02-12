@@ -17,6 +17,21 @@ import { Toast, useToast } from './components/Toast';
 import { getUserLocation, getWeatherData, type WeatherData } from './utils/weather';
 import type { Project, RecurringTask, Habit, OneOffTask } from './types';
 
+// Hook to detect mobile screen
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 function AppContent() {
   const { state, dispatch, toggleTheme } = useApp();
   const [selectedProject, setSelectedProject] = useState<Project | null | undefined>(undefined);
@@ -27,7 +42,8 @@ function AppContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [projectsViewOpen, setProjectsViewOpen] = useState(false);
   const [taskSchedulerOpen, setTaskSchedulerOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const isMobile = useIsMobile();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed on mobile
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebar-width');
     return saved ? parseInt(saved, 10) : 280;
@@ -36,6 +52,13 @@ function AppContent() {
   const { messages: toastMessages, dismissToast } = useToast();
 
   const quickAddInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-collapse sidebar on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    }
+  }, [isMobile]);
 
   // Fetch weather data
   useEffect(() => {
@@ -192,6 +215,12 @@ function AppContent() {
     setSidebarCollapsed(prev => !prev);
   }, []);
 
+  const closeMobileSidebar = useCallback(() => {
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    }
+  }, [isMobile]);
+
   const handleSidebarWidthChange = useCallback((width: number) => {
     setSidebarWidth(width);
     localStorage.setItem('sidebar-width', width.toString());
@@ -226,9 +255,11 @@ function AppContent() {
         sidebarCollapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
         onSidebarWidthChange={handleSidebarWidthChange}
+        isMobile={isMobile}
+        onCloseMobileSidebar={closeMobileSidebar}
         sidebar={
           <Sidebar
-            collapsed={sidebarCollapsed}
+            collapsed={sidebarCollapsed && !isMobile}
             onToggleCollapse={toggleSidebar}
             onSelectProject={handleSelectProject}
             onSelectRecurringTask={handleSelectRecurringTask}
@@ -239,7 +270,7 @@ function AppContent() {
             weather={weather}
           />
         }
-        header={<Header />}
+        header={<Header onMenuClick={toggleSidebar} showMenuButton={isMobile} />}
         weekStrip={<WeekStrip />}
       >
         {state.viewMode === 'week' ? (

@@ -30,8 +30,8 @@ export function EditorPanel({
         onClick={onClose}
       />
 
-      {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-[380px] bg-dark-secondary border-l border-dark-border z-50 overflow-y-auto animate-slide-in">
+      {/* Panel - Full screen on mobile, 380px on desktop */}
+      <div className="fixed inset-0 md:inset-auto md:top-0 md:right-0 md:h-full md:w-[380px] bg-dark-secondary md:border-l border-dark-border z-50 overflow-y-auto animate-slide-in">
         {selectedTask ? (
           <TaskEditor
             projectId={selectedTask.projectId}
